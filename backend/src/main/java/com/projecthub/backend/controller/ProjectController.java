@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -55,6 +56,19 @@ public class ProjectController {
             project.setId(id);
             projectService.updateProject(project);
             return ResponseEntity.ok(project);
+        }
+        else
+            return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/projects/{id}")
+    public ResponseEntity<Void> deleteProject(@PathVariable long id)
+    {
+        Project project = projectService.getProjectbyID(id);
+        if(project != null)
+        {
+            projectService.deleteProject(id);
+            return ResponseEntity.noContent().build();
         }
         else
             return ResponseEntity.notFound().build();

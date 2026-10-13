@@ -22,7 +22,7 @@ public class ProjectRepo
     public Project getProjectbyID(long id) {
         Project project = null;
         for (Project p : projects) {
-            if(p.getId() == id)
+            if (p.getId() != null && p.getId().equals(id))
                 project = p;
         }
         return project;
@@ -34,11 +34,15 @@ public class ProjectRepo
 
     public void updateProject(Project project) {
         for(Project p : projects) {
-            if(p.getId() == project.getId())
+            if (p.getId() != null && p.getId().equals(project.getId()))
             {
                 p.setName(project.getName());
                 p.setStatus(project.getStatus());
             }
         }
+    }
+
+    public void deleteProject(long id) {
+        projects.removeIf(p -> (p.getId() != null && p.getId().equals(id)));
     }
 }

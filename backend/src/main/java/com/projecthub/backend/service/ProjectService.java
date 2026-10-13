@@ -3,7 +3,6 @@ package com.projecthub.backend.service;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.repository.ProjectRepo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,5 +27,9 @@ public class ProjectService
 
     public void updateProject(Project project) {
         projectRepo.updateProject(project);
+    }
+
+    public void deleteProject(long id) {
+        projectRepo.deleteProject(id);
     }
 }
