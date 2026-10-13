@@ -7,7 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class Project
 {
-    private long id;
+    private Long id;
     private String name;
     private String status;
 }

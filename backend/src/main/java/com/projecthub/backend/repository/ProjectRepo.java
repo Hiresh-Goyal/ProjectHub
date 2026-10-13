@@ -11,9 +11,9 @@ import java.util.List;
 public class ProjectRepo
 {
     private List<Project> projects = new ArrayList<>(Arrays.asList(
-             new Project(1,"Project 1", "In progress")
-            ,new Project(2,"Project 2", "In progress")
-            ,new Project(3,"Project 3", "In progress")));
+             new Project(1L,"Project 1", "In progress")
+            ,new Project(2L,"Project 2", "In progress")
+            ,new Project(3L,"Project 3", "In progress")));
 
     public List<Project> getProjects() {
         return projects;
@@ -30,5 +30,15 @@ public class ProjectRepo
 
     public void addProject(Project project) {
         projects.add(project);
+    }
+
+    public void updateProject(Project project) {
+        for(Project p : projects) {
+            if(p.getId() == project.getId())
+            {
+                p.setName(project.getName());
+                p.setStatus(project.getStatus());
+            }
+        }
     }
 }

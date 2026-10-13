@@ -2,6 +2,7 @@ package com.projecthub.backend.controller;
 
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.service.ProjectService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,10 +39,24 @@ public class ProjectController {
     {
         Project project1 = projectService.getProjectbyID(project.getId());
         if(project1 != null)
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         else {
             projectService.addProject(project);
+            return ResponseEntity.status(HttpStatus.CREATED).body(project);
+        }
+    }
+
+    @PutMapping("/projects/{id}")
+    public ResponseEntity<Project> updateProject(@RequestBody Project project, @PathVariable long id)
+    {
+        Project project1 = projectService.getProjectbyID(id);
+        if(project1 != null)
+        {
+            project.setId(id);
+            projectService.updateProject(project);
             return ResponseEntity.ok(project);
         }
+        else
+            return ResponseEntity.notFound().build();
     }
 }

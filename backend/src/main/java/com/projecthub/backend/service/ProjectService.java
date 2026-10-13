@@ -25,4 +25,8 @@ public class ProjectService
     public void addProject(Project project) {
         projectRepo.addProject(project);
     }
+
+    public void updateProject(Project project) {
+        projectRepo.updateProject(project);
+    }
 }
