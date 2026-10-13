@@ -2,12 +2,8 @@ package com.projecthub.backend.controller;
 
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.service.ProjectService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -28,12 +24,24 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/{id}")
-    public ResponseEntity<Project> getProject(@PathVariable int id)
+    public ResponseEntity<Project> getProject(@PathVariable long id)
     {
         Project project = projectService.getProjectbyID(id);
         if(project == null)
             return ResponseEntity.notFound().build();
         else
             return ResponseEntity.ok(project);
+    }
+
+    @PostMapping("/projects")
+    public ResponseEntity<Project> addProject(@RequestBody Project project)
+    {
+        Project project1 = projectService.getProjectbyID(project.getId());
+        if(project1 != null)
+            return ResponseEntity.badRequest().build();
+        else {
+            projectService.addProject(project);
+            return ResponseEntity.ok(project);
+        }
     }
 }
