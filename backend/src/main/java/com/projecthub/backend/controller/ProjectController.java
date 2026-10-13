@@ -7,13 +7,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1")
 public class ProjectController {
 
-    ProjectService  projectService;
+    private final ProjectService  projectService;
 
     public ProjectController(ProjectService projectService) {
         this.projectService = projectService;
@@ -38,13 +37,8 @@ public class ProjectController {
     @PostMapping("/projects")
     public ResponseEntity<Project> addProject(@RequestBody Project project)
     {
-        Project project1 = projectService.getProjectbyID(project.getId());
-        if(project1 != null)
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        else {
-            projectService.addProject(project);
-            return ResponseEntity.status(HttpStatus.CREATED).body(project);
-        }
+        project = projectService.addProject(project);
+        return ResponseEntity.status(HttpStatus.CREATED).body(project);
     }
 
     @PutMapping("/projects/{id}")
