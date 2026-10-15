@@ -1,7 +1,9 @@
 package com.projecthub.backend.controller;
 
+import com.projecthub.backend.exception.ProjectNotFoundException;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.service.ProjectService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,46 +27,37 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/{id}")
-    public ResponseEntity<Project> getProject(@PathVariable long id)
-    {
-        Project project = projectService.getProjectbyID(id);
-        if(project == null)
-            return ResponseEntity.notFound().build();
-        else
-            return ResponseEntity.ok(project);
+    public ResponseEntity<Project> getProject(@PathVariable long id) {
+        return ResponseEntity.ok(projectService.getProjectbyID(id));
     }
 
     @PostMapping("/projects")
-    public ResponseEntity<Project> addProject(@RequestBody Project project)
+    public ResponseEntity<Project> addProject(@Valid @RequestBody Project project)
     {
         project = projectService.addProject(project);
         return ResponseEntity.status(HttpStatus.CREATED).body(project);
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<Project> updateProject(@RequestBody Project project, @PathVariable long id)
+    public ResponseEntity<Project> updateProject(@Valid @RequestBody Project project, @PathVariable long id)
     {
-        Project project1 = projectService.getProjectbyID(id);
-        if(project1 != null)
-        {
-            project.setId(id);
-            projectService.updateProject(project);
-            return ResponseEntity.ok(project);
-        }
-        else
-            return ResponseEntity.notFound().build();
+        Project existingProject = projectService.getProjectbyID(id);
+        existingProject.setName(project.getName());
+        existingProject.setStatus(project.getStatus());
+        projectService.updateProject(existingProject);
+        return ResponseEntity.ok(existingProject);
     }
 
     @DeleteMapping("/projects/{id}")
-    public ResponseEntity<Void> deleteProject(@PathVariable long id)
-    {
-        Project project = projectService.getProjectbyID(id);
-        if(project != null)
-        {
-            projectService.deleteProject(id);
-            return ResponseEntity.noContent().build();
-        }
-        else
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deleteProject(@PathVariable long id) {
+        projectService.getProjectbyID(id);
+
+        projectService.deleteProject(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/test-error")
+    public String testError() {
+        throw new RuntimeException("This is a test exception");
     }
 }

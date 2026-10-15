@@ -1,5 +1,6 @@
 package com.projecthub.backend.service;
 
+import com.projecthub.backend.exception.ProjectNotFoundException;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.repository.ProjectRepo;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,8 @@ public class ProjectService
     }
 
     public Project getProjectbyID(long id) {
-        return projectRepo.findById(id).orElse(null);
+        return projectRepo.findById(id).orElseThrow(() ->
+                new ProjectNotFoundException("Project Not Found with ID : " + id));
     }
 
     public Project addProject(Project project) {
