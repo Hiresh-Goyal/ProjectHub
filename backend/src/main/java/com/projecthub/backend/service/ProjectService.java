@@ -30,8 +30,8 @@ public class ProjectService
         return projectRepo.save(project);
     }
 
-    public void updateProject(Project project) {
-        projectRepo.save(project);
+    public Project updateProject(Project project) {
+        return projectRepo.save(project);
     }
 
     public void deleteProject(long id) {

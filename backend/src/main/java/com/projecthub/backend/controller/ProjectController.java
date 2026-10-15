@@ -1,6 +1,8 @@
 package com.projecthub.backend.controller;
 
-import com.projecthub.backend.exception.ProjectNotFoundException;
+import com.projecthub.backend.dto.CreateProjectRequest;
+import com.projecthub.backend.dto.ProjectResponse;
+import com.projecthub.backend.mapper.ProjectMapper;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.service.ProjectService;
 import jakarta.validation.Valid;
@@ -15,37 +17,49 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService  projectService;
+    private final ProjectMapper projectMapper;
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(ProjectService projectService, ProjectMapper projectMapper) {
         this.projectService = projectService;
+        this.projectMapper = projectMapper;
     }
 
     @GetMapping("/projects")
-    public ResponseEntity<List<Project>> getProjects()
+    public ResponseEntity<List<ProjectResponse>> getProjects()
     {
-        return ResponseEntity.ok(projectService.getProjects());
+        List<Project> projects = projectService.getProjects();
+        List<ProjectResponse> responseList = projects.stream()
+                .map(projectMapper::mapToResponse)
+                .toList();
+
+        return ResponseEntity.ok(responseList);
     }
 
     @GetMapping("/projects/{id}")
-    public ResponseEntity<Project> getProject(@PathVariable long id) {
-        return ResponseEntity.ok(projectService.getProjectbyID(id));
+    public ResponseEntity<ProjectResponse> getProject(@PathVariable long id) {
+        Project project = projectService.getProjectbyID(id);
+        return ResponseEntity.ok(projectMapper.mapToResponse(project));
     }
 
     @PostMapping("/projects")
-    public ResponseEntity<Project> addProject(@Valid @RequestBody Project project)
+    public ResponseEntity<ProjectResponse> addProject(@Valid @RequestBody CreateProjectRequest projectDto)
     {
-        project = projectService.addProject(project);
-        return ResponseEntity.status(HttpStatus.CREATED).body(project);
+        Project project = projectMapper.toEntity(projectDto);
+
+        Project savedProject = projectService.addProject(project);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(projectMapper.mapToResponse(savedProject));
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<Project> updateProject(@Valid @RequestBody Project project, @PathVariable long id)
+    public ResponseEntity<ProjectResponse> updateProject(@Valid @RequestBody CreateProjectRequest projectDto, @PathVariable long id)
     {
         Project existingProject = projectService.getProjectbyID(id);
-        existingProject.setName(project.getName());
-        existingProject.setStatus(project.getStatus());
-        projectService.updateProject(existingProject);
-        return ResponseEntity.ok(existingProject);
+        projectMapper.updateEntity(projectDto, existingProject);
+
+        Project savedProject = projectService.updateProject(existingProject);
+
+        return ResponseEntity.ok(projectMapper.mapToResponse(savedProject));
     }
 
     @DeleteMapping("/projects/{id}")
@@ -56,8 +70,4 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/test-error")
-    public String testError() {
-        throw new RuntimeException("This is a test exception");
-    }
 }
