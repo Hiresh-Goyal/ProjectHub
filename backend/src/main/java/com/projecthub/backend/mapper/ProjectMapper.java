@@ -1,6 +1,6 @@
 package com.projecthub.backend.mapper;
 
-import com.projecthub.backend.dto.CreateProjectRequest;
+import com.projecthub.backend.dto.ProjectRequest;
 import com.projecthub.backend.dto.ProjectResponse;
 import com.projecthub.backend.model.Project;
 import org.springframework.stereotype.Component;
@@ -8,20 +8,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProjectMapper
 {
-    public ProjectResponse mapToResponse(Project project) {
+    public ProjectResponse toProjectResponse(Project project) {
         return new ProjectResponse(project.getId(), project.getName(), project.getStatus());
     }
 
-    public Project toEntity(CreateProjectRequest createProjectRequest) {
+    public Project toEntity(ProjectRequest projectRequest) {
         Project project = new Project();
-        project.setName(createProjectRequest.getName());
-        project.setStatus(createProjectRequest.getStatus());
+        project.setName(projectRequest.getName());
+        project.setStatus(projectRequest.getStatus());
 
         return project;
     }
 
-    public void updateEntity(CreateProjectRequest createProjectRequest, Project project) {
-        project.setName(createProjectRequest.getName());
-        project.setStatus(createProjectRequest.getStatus());
+    public void updateEntity(ProjectRequest projectRequest, Project project) {
+        project.setName(projectRequest.getName());
+        project.setStatus(projectRequest.getStatus());
     }
 }

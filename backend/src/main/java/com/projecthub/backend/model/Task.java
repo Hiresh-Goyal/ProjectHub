@@ -1,0 +1,37 @@
+package com.projecthub.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+public class Task
+{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    @Size(max = 150, message = "Task title cannot exceed 150 characters")
+    private String title;
+    @Size(max = 1000, message = "Task description cannot exceed 1000 characters")
+    private String description;
+    @NotBlank
+    private String status;
+    @NotBlank
+    private String priority;
+    private LocalDate dueDate;
+
+    @ManyToOne
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
+
+}

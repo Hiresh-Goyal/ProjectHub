@@ -1,6 +1,6 @@
 package com.projecthub.backend.controller;
 
-import com.projecthub.backend.dto.CreateProjectRequest;
+import com.projecthub.backend.dto.ProjectRequest;
 import com.projecthub.backend.dto.ProjectResponse;
 import com.projecthub.backend.mapper.ProjectMapper;
 import com.projecthub.backend.model.Project;
@@ -28,38 +28,29 @@ public class ProjectController {
     public ResponseEntity<List<ProjectResponse>> getProjects()
     {
         List<Project> projects = projectService.getProjects();
-        List<ProjectResponse> responseList = projects.stream()
-                .map(projectMapper::mapToResponse)
+        List<ProjectResponse> projectList = projects.stream()
+                .map(projectMapper::toProjectResponse)
                 .toList();
 
-        return ResponseEntity.ok(responseList);
+        return ResponseEntity.ok(projectList);
     }
 
     @GetMapping("/projects/{id}")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable long id) {
         Project project = projectService.getProjectbyID(id);
-        return ResponseEntity.ok(projectMapper.mapToResponse(project));
+        return ResponseEntity.ok(projectMapper.toProjectResponse(project));
     }
 
     @PostMapping("/projects")
-    public ResponseEntity<ProjectResponse> addProject(@Valid @RequestBody CreateProjectRequest projectDto)
+    public ResponseEntity<ProjectResponse> addProject(@Valid @RequestBody ProjectRequest projectRequest)
     {
-        Project project = projectMapper.toEntity(projectDto);
-
-        Project savedProject = projectService.addProject(project);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(projectMapper.mapToResponse(savedProject));
+        return ResponseEntity.status(HttpStatus.CREATED).body(projectService.addProject(projectRequest));
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<ProjectResponse> updateProject(@Valid @RequestBody CreateProjectRequest projectDto, @PathVariable long id)
+    public ResponseEntity<ProjectResponse> updateProject(@Valid @RequestBody ProjectRequest projectRequest, @PathVariable long id)
     {
-        Project existingProject = projectService.getProjectbyID(id);
-        projectMapper.updateEntity(projectDto, existingProject);
-
-        Project savedProject = projectService.updateProject(existingProject);
-
-        return ResponseEntity.ok(projectMapper.mapToResponse(savedProject));
+        return ResponseEntity.ok(projectService.updateProject(projectRequest, id));
     }
 
     @DeleteMapping("/projects/{id}")

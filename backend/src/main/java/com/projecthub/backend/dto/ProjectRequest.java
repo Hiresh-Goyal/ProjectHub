@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class CreateProjectRequest
+public class ProjectRequest
 {
     @NotBlank(message = "Project name is required")
     @Size(max = 100, message = "Project name should not exceed 100 char")

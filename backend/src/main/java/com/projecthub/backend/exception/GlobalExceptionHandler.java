@@ -1,6 +1,7 @@
 package com.projecthub.backend.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -19,7 +20,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> error.getDefaultMessage())
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(", "));
 
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
@@ -45,6 +46,20 @@ public class GlobalExceptionHandler {
         );
 
         log.info("Project lookup failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(TaskNotFoundException.class)
+    public ResponseEntity<GlobalErrorResponse> handleTaskNotFoundException(TaskNotFoundException ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+
+        log.info("Task lookup failed: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
