@@ -12,7 +12,7 @@ public class ProjectMapper
         return new ProjectResponse(project.getId(), project.getName(), project.getStatus());
     }
 
-    public Project toEntity(ProjectRequest projectRequest) {
+    public Project toProject(ProjectRequest projectRequest) {
         Project project = new Project();
         project.setName(projectRequest.getName());
         project.setStatus(projectRequest.getStatus());
@@ -20,7 +20,7 @@ public class ProjectMapper
         return project;
     }
 
-    public void updateEntity(ProjectRequest projectRequest, Project project) {
+    public void updateProject(ProjectRequest projectRequest, Project project) {
         project.setName(projectRequest.getName());
         project.setStatus(projectRequest.getStatus());
     }

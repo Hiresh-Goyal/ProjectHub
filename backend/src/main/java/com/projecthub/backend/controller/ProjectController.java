@@ -37,7 +37,7 @@ public class ProjectController {
 
     @GetMapping("/projects/{id}")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable long id) {
-        Project project = projectService.getProjectbyID(id);
+        Project project = projectService.getProjectbyId(id);
         return ResponseEntity.ok(projectMapper.toProjectResponse(project));
     }
 
@@ -55,7 +55,7 @@ public class ProjectController {
 
     @DeleteMapping("/projects/{id}")
     public ResponseEntity<Void> deleteProject(@PathVariable long id) {
-        projectService.getProjectbyID(id);
+        projectService.getProjectbyId(id);
 
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();

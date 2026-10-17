@@ -63,6 +63,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<GlobalErrorResponse> handleUserNotFoundException(Exception ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+        log.info("User lookup failed: {}", ex.getMessage());
+        return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(DuplicateUserEmailException.class)
+    public ResponseEntity<GlobalErrorResponse> handleDuplicateUserEmailException(Exception ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+        log.info("Duplicate User Email {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GlobalErrorResponse> handleException(Exception ex)
     {
@@ -77,4 +103,5 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
 }

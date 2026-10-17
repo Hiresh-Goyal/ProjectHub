@@ -38,17 +38,17 @@ public class TaskService
     public TaskResponse addTask(TaskRequest taskRequest)
     {
         Task task = taskMapper.toTask(taskRequest);
-        task.setProject(projectService.getProjectbyID(taskRequest.getProjectId()));
+        task.setProject(projectService.getProjectbyId(taskRequest.getProjectId()));
         Task savedTask = taskRepo.save(task);
 
         return taskMapper.toTaskResponse(savedTask);
     }
 
     @Transactional
-    public TaskResponse updateTask(TaskRequest taskDto, long id) {
+    public TaskResponse updateTask(TaskRequest taskRequest, long id) {
         Task existingTask = getTaskById(id);
-        taskMapper.updateTask(taskDto, existingTask);
-        existingTask.setProject(projectService.getProjectbyID(taskDto.getProjectId()));
+        taskMapper.updateTask(taskRequest, existingTask);
+        existingTask.setProject(projectService.getProjectbyId(taskRequest.getProjectId()));
         return taskMapper.toTaskResponse(existingTask);
     }
 

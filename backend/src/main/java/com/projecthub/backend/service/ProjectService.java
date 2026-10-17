@@ -27,14 +27,14 @@ public class ProjectService
         return projectRepo.findAll();
     }
 
-    public Project getProjectbyID(long id) {
+    public Project getProjectbyId(long id) {
         return projectRepo.findById(id).orElseThrow(() ->
                 new ProjectNotFoundException("Project Not Found with ID : " + id));
     }
 
     public ProjectResponse addProject(ProjectRequest projectRequest) {
 
-        Project project = projectMapper.toEntity(projectRequest);
+        Project project = projectMapper.toProject(projectRequest);
         Project savedProject = projectRepo.save(project);
 
         return projectMapper.toProjectResponse(savedProject);
@@ -42,8 +42,8 @@ public class ProjectService
 
     @Transactional
     public ProjectResponse updateProject(ProjectRequest projectRequest, long id) {
-        Project existingProject = getProjectbyID(id);
-        projectMapper.updateEntity(projectRequest, existingProject);
+        Project existingProject = getProjectbyId(id);
+        projectMapper.updateProject(projectRequest, existingProject);
         return  projectMapper.toProjectResponse(existingProject);
     }
 
