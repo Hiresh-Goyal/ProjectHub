@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.stream.Collectors;
 
@@ -64,7 +65,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<GlobalErrorResponse> handleUserNotFoundException(Exception ex)
+    public ResponseEntity<GlobalErrorResponse> handleUserNotFoundException(UserNotFoundException ex)
     {
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
@@ -77,7 +78,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DuplicateUserEmailException.class)
-    public ResponseEntity<GlobalErrorResponse> handleDuplicateUserEmailException(Exception ex)
+    public ResponseEntity<GlobalErrorResponse> handleDuplicateUserEmailException(DuplicateUserEmailException ex)
     {
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
                 HttpStatus.CONFLICT.value(),
@@ -87,6 +88,20 @@ public class GlobalExceptionHandler {
         );
         log.info("Duplicate User Email {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<GlobalErrorResponse> handleResponseStatusException(ResponseStatusException ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                ex.getStatusCode().value(),
+                ex.getStatusCode().toString(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+
+        log.info("Response Status {}", ex.getStatusCode());
+        return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

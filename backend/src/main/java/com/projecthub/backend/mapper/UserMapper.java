@@ -1,6 +1,7 @@
 package com.projecthub.backend.mapper;
 
-import com.projecthub.backend.dto.UserRequest;
+import com.projecthub.backend.dto.CreateUserRequest;
+import com.projecthub.backend.dto.UpdateUserRequest;
 import com.projecthub.backend.dto.UserResponse;
 import com.projecthub.backend.model.User;
 import org.springframework.stereotype.Component;
@@ -9,12 +10,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper
 {
-    public User toUser(UserRequest userRequest)
+    public User toUser(CreateUserRequest createUserRequest)
     {
         User user = new User();
-        user.setName(userRequest.getName());
-        user.setEmail(userRequest.getEmail());
-        user.setPassword(userRequest.getPassword());
+        user.setName(createUserRequest.getName());
+        user.setEmail(createUserRequest.getEmail());
+        user.setPassword(createUserRequest.getPassword());
         return user;
     }
 
@@ -29,10 +30,9 @@ public class UserMapper
         );
     }
 
-    public void updateUser(UserRequest userRequest, User existingUser)
+    public void updateUser(UpdateUserRequest updateUserRequest, User existingUser)
     {
-        existingUser.setName(userRequest.getName());
-        existingUser.setEmail(userRequest.getEmail());
-        existingUser.setPassword(userRequest.getPassword());
+        existingUser.setName(updateUserRequest.getName());
+        existingUser.setEmail(updateUserRequest.getEmail());
     }
 }

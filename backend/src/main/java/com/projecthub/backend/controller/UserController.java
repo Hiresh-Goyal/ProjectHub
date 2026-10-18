@@ -1,6 +1,8 @@
 package com.projecthub.backend.controller;
 
-import com.projecthub.backend.dto.UserRequest;
+import com.projecthub.backend.dto.CreateUserRequest;
+import com.projecthub.backend.dto.UpdatePasswordRequest;
+import com.projecthub.backend.dto.UpdateUserRequest;
 import com.projecthub.backend.dto.UserResponse;
 import com.projecthub.backend.mapper.UserMapper;
 import com.projecthub.backend.model.User;
@@ -41,13 +43,19 @@ public class UserController
     }
 
     @PostMapping("/users")
-    public ResponseEntity<UserResponse> addUser(@Valid @RequestBody UserRequest userRequest){
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.addUser(userRequest));
+    public ResponseEntity<UserResponse> addUser(@Valid @RequestBody CreateUserRequest createUserRequest){
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.addUser(createUserRequest));
     }
 
     @PutMapping("/users/{id}")
-    public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UserRequest userRequest, @PathVariable Long id){
-        return ResponseEntity.ok(userService.updateUser(userRequest,id));
+    public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest updateUserRequest, @PathVariable Long id){
+        return ResponseEntity.ok(userService.updateUser(updateUserRequest,id));
+    }
+
+    @PatchMapping("/users/{id}/password")
+    public ResponseEntity<Void> updatePassword(@PathVariable Long id, @Valid @RequestBody UpdatePasswordRequest updatePasswordRequest){
+        userService.updatePassword(updatePasswordRequest,id);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/users/{id}")

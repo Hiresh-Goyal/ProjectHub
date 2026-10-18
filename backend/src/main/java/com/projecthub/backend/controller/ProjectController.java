@@ -61,4 +61,10 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/admin")
+    public ResponseEntity<Void> test()
+    {
+        return ResponseEntity.ok().build();
+    }
+
 }

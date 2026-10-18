@@ -34,7 +34,6 @@ public class User
     private String email;
 
     @NotBlank(message = "User password is required")
-    @Size(max = 50, message = "User Password cannot exceed 50 characters")
     private String password;
 
     @CreationTimestamp
