@@ -104,6 +104,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<GlobalErrorResponse> handleIllegalStateException(IllegalStateException ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GlobalErrorResponse> handleException(Exception ex)
     {
@@ -116,7 +129,7 @@ public class GlobalExceptionHandler {
 
         log.error("Unexpected error occurred while processing request", ex);
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
 }

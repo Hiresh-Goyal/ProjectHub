@@ -8,6 +8,7 @@ import com.projecthub.backend.exception.DuplicateUserEmailException;
 import com.projecthub.backend.exception.UserNotFoundException;
 import com.projecthub.backend.mapper.UserMapper;
 import com.projecthub.backend.model.User;
+import com.projecthub.backend.repository.RoleRepo;
 import com.projecthub.backend.repository.UserRepo;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
@@ -25,11 +26,13 @@ public class UserService
     private final UserRepo userRepo;
     private final UserMapper userMapper;
     private final PasswordEncoder encoder;
+    private final RoleRepo roleRepo;
 
-    public UserService(UserRepo userRepo, UserMapper userMapper, PasswordEncoder encoder) {
+    public UserService(UserRepo userRepo, UserMapper userMapper, PasswordEncoder encoder, RoleRepo roleRepo) {
         this.userRepo = userRepo;
         this.userMapper = userMapper;
         this.encoder = encoder;
+        this.roleRepo = roleRepo;
     }
 
     public List<User> getUsers(){
@@ -50,6 +53,7 @@ public class UserService
             throw new DuplicateUserEmailException("Email already exists");
         }
         user.setPassword(encoder.encode(user.getPassword()));
+        user.getRoles().add(roleRepo.findByName("ROLE_USER").orElseThrow(() -> new IllegalStateException("The ROLE_USER hasnt been initialized in db")));
         User savedUser = userRepo.save(user);
         return userMapper.toUserResponse(savedUser);
     }
