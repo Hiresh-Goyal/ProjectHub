@@ -5,6 +5,8 @@ import com.projecthub.backend.dto.TaskResponse;
 import com.projecthub.backend.model.Task;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class TaskMapper
 {
@@ -34,5 +36,11 @@ public class TaskMapper
         existingTask.setStatus(taskRequest.getStatus());
         existingTask.setPriority(taskRequest.getPriority());
         existingTask.setDueDate(taskRequest.getDueDate());
+    }
+
+    public List<TaskResponse> toTaskResponses(List<Task> tasks) {
+        return tasks.stream()
+                .map(this::toTaskResponse)
+                .toList();
     }
 }

@@ -8,6 +8,7 @@ import com.projecthub.backend.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,16 +29,12 @@ public class ProjectController {
     public ResponseEntity<List<ProjectResponse>> getProjects()
     {
         List<Project> projects = projectService.getProjects();
-        List<ProjectResponse> projectList = projects.stream()
-                .map(projectMapper::toProjectResponse)
-                .toList();
-
-        return ResponseEntity.ok(projectList);
+        return ResponseEntity.ok(projectMapper.toProjectResponses(projects));
     }
 
     @GetMapping("/projects/{id}")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable long id) {
-        Project project = projectService.getProjectbyId(id);
+        Project project = projectService.getProjectById(id);
         return ResponseEntity.ok(projectMapper.toProjectResponse(project));
     }
 
@@ -53,18 +50,12 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.updateProject(projectRequest, id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/projects/{id}")
     public ResponseEntity<Void> deleteProject(@PathVariable long id) {
-        projectService.getProjectbyId(id);
+        projectService.getProjectById(id);
 
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }
-
-    @GetMapping("/admin")
-    public ResponseEntity<Void> test()
-    {
-        return ResponseEntity.ok().build();
-    }
-
 }

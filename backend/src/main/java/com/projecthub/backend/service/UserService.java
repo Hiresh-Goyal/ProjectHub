@@ -61,8 +61,6 @@ public class UserService
     @Transactional
     public UserResponse updateUser(UpdateUserRequest updateUserRequest, long id){
         User existingUser = getUserById(id);
-        checkOwnership(existingUser);
-
         updateUserRequest.setEmail(updateUserRequest.getEmail().trim().toLowerCase(Locale.ROOT));
 
         if (!(existingUser.getEmail().equals(updateUserRequest.getEmail()))
@@ -73,17 +71,24 @@ public class UserService
         return userMapper.toUserResponse(existingUser);
     }
 
-    private void checkOwnership(User existingUser) {
+    public void checkOwnership(Long id) {
+        User existingUser = getUserById(id);
         String email = SecurityContextHolder.getContext().getAuthentication().getName().trim().toLowerCase(Locale.ROOT);
         if(email.equals(existingUser.getEmail()))
             return;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to update this user");
     }
 
+    public boolean boolOwnership(Long id) {
+        User existingUser = getUserById(id);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName().trim().toLowerCase(Locale.ROOT);
+        return email.equals(existingUser.getEmail());
+    }
+
     @Transactional
     public void updatePassword(UpdatePasswordRequest updatePasswordRequest, long id){
         User existingUser = getUserById(id);
-        checkOwnership(existingUser);
+        checkOwnership(id);
         if (!encoder.matches(
                 updatePasswordRequest.getCurrentPass(),
                 existingUser.getPassword())) {
@@ -94,6 +99,14 @@ public class UserService
         }
 
         existingUser.setPassword(encoder.encode(updatePasswordRequest.getNewPass()));
+    }
+
+    public User getLoggedInUser()
+    {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName().trim().toLowerCase(Locale.ROOT);
+        return userRepo.findByEmail(email).orElseThrow(() ->
+                new UserNotFoundException("User not found with email : " + email)
+        );
     }
 
     public void  deleteUser(long id){

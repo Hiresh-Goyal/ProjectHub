@@ -10,6 +10,7 @@ import com.projecthub.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,7 +27,7 @@ public class UserController
         this.userMapper = userMapper;
     }
 
-
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<List<UserResponse>> getUsers(){
         List<User> users = userService.getUsers();
@@ -37,6 +38,7 @@ public class UserController
         return ResponseEntity.ok(userList);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @userService.boolOwnership(#id)")
     @GetMapping("/users/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long id){
         return  ResponseEntity.ok(userMapper.toUserResponse(userService.getUserById(id)));
@@ -47,6 +49,7 @@ public class UserController
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.addUser(createUserRequest));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @userService.boolOwnership(#id)")
     @PutMapping("/users/{id}")
     public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest updateUserRequest, @PathVariable Long id){
         return ResponseEntity.ok(userService.updateUser(updateUserRequest,id));
@@ -58,10 +61,17 @@ public class UserController
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @userService.boolOwnership(#id)")
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id){
         userService.getUserById(id);
         userService.deleteUser(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @GetMapping("/both")
+    @PreAuthorize("hasAllRoles('ADMIN', 'USER')")
+    public ResponseEntity<String> getBoth(){
+        return ResponseEntity.ok("Both roles were present");
     }
 }

@@ -5,6 +5,8 @@ import com.projecthub.backend.dto.ProjectResponse;
 import com.projecthub.backend.model.Project;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class ProjectMapper
 {
@@ -23,5 +25,11 @@ public class ProjectMapper
     public void updateProject(ProjectRequest projectRequest, Project project) {
         project.setName(projectRequest.getName());
         project.setStatus(projectRequest.getStatus());
+    }
+
+    public List<ProjectResponse> toProjectResponses(List<Project> projects) {
+        return projects.stream()
+                .map(this::toProjectResponse)
+                .toList();
     }
 }

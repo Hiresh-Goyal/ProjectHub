@@ -28,11 +28,7 @@ public class TaskController
     public ResponseEntity<List<TaskResponse>> getTasks()
     {
         List<Task> tasks = taskService.getTasks();
-        List<TaskResponse> taskList = tasks.stream()
-                .map(taskMapper::toTaskResponse)
-                .toList();
-
-        return ResponseEntity.ok(taskList);
+        return ResponseEntity.ok(taskMapper.toTaskResponses(tasks));
     }
 
     @GetMapping("/tasks/{id}")
