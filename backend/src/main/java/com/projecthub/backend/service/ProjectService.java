@@ -6,9 +6,11 @@ import com.projecthub.backend.exception.ProjectNotFoundException;
 import com.projecthub.backend.mapper.ProjectMapper;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.model.ProjectMember;
+import com.projecthub.backend.model.Task;
 import com.projecthub.backend.model.User;
 import com.projecthub.backend.repository.ProjectMemberRepo;
 import com.projecthub.backend.repository.ProjectRepo;
+import com.projecthub.backend.repository.TaskAssignmentRepo;
 import com.projecthub.backend.repository.TaskRepo;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
@@ -27,14 +29,16 @@ public class ProjectService
     private final UserService userService;
     private final ProjectMemberRepo projectMemberRepo;
     private final TaskRepo taskRepo;
+    private final TaskAssignmentRepo  taskAssignmentRepo;
 
-    public ProjectService(ProjectRepo projectRepo, ProjectMapper projectMapper, UserService userService, ProjectMemberRepo projectMemberRepo, TaskRepo taskRepo)
+    public ProjectService(ProjectRepo projectRepo, ProjectMapper projectMapper, UserService userService, ProjectMemberRepo projectMemberRepo, TaskRepo taskRepo, TaskAssignmentRepo taskAssignmentRepo)
     {
         this.projectRepo = projectRepo;
         this.projectMapper = projectMapper;
         this.userService = userService;
         this.projectMemberRepo = projectMemberRepo;
         this.taskRepo = taskRepo;
+        this.taskAssignmentRepo = taskAssignmentRepo;
     }
 
     public List<Project> getProjects() {
@@ -95,8 +99,14 @@ public class ProjectService
     @Transactional
     public void deleteProject(long id) {
         if(isProjectOwnerOrAdmin(id)) {
-            taskRepo.deleteAll(taskRepo.findByProjectId(id));
+            List<Task> tasks = taskRepo.findByProjectId(id);
+            //delete all task assignments
+            tasks.forEach(task -> taskAssignmentRepo.deleteByTaskId(task.getId()));
+            //delete all tasks
+            taskRepo.deleteAll(tasks);
+            //delete all member project relations
             projectMemberRepo.deleteAll(projectMemberRepo.findAllByProjectId(id));
+            //delete the project
             projectRepo.deleteById(id);
         }
         else

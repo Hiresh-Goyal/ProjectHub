@@ -8,11 +8,10 @@ import com.projecthub.backend.exception.DuplicateUserEmailException;
 import com.projecthub.backend.exception.UserNotFoundException;
 import com.projecthub.backend.mapper.UserMapper;
 import com.projecthub.backend.model.Project;
+import com.projecthub.backend.model.ProjectMember;
+import com.projecthub.backend.model.Role;
 import com.projecthub.backend.model.User;
-import com.projecthub.backend.repository.ProjectMemberRepo;
-import com.projecthub.backend.repository.ProjectRepo;
-import com.projecthub.backend.repository.RoleRepo;
-import com.projecthub.backend.repository.UserRepo;
+import com.projecthub.backend.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,14 +31,16 @@ public class UserService
     private final RoleRepo roleRepo;
     private final ProjectRepo projectRepo;
     private final ProjectMemberRepo projectMemberRepo;
+    private final TaskAssignmentRepo  taskAssignmentRepo;
 
-    public UserService(UserRepo userRepo, UserMapper userMapper, PasswordEncoder encoder, RoleRepo roleRepo, ProjectRepo projectRepo, ProjectMemberRepo projectMemberRepo) {
+    public UserService(UserRepo userRepo, UserMapper userMapper, PasswordEncoder encoder, RoleRepo roleRepo, ProjectRepo projectRepo, ProjectMemberRepo projectMemberRepo, TaskAssignmentRepo taskAssignmentRepo) {
         this.userRepo = userRepo;
         this.userMapper = userMapper;
         this.encoder = encoder;
         this.roleRepo = roleRepo;
         this.projectRepo = projectRepo;
         this.projectMemberRepo = projectMemberRepo;
+        this.taskAssignmentRepo = taskAssignmentRepo;
     }
 
     public List<User> getUsers(){
@@ -118,8 +119,14 @@ public class UserService
         User currentUser = getUserById(id);
         List<Project> ownedProjects = projectRepo.findAllByOwner(currentUser);
         if(ownedProjects.isEmpty()) {
-            projectMemberRepo.findAllByUserId(currentUser.getId())
-                    .forEach(projectMember -> projectMemberRepo.deleteByProjectIdAndUserId(projectMember.getProject().getId(),id));
+            List<ProjectMember> memberOf =projectMemberRepo.findAllByUserId(currentUser.getId());
+
+            //delete all taskAssignment for project member
+            memberOf.forEach(projectMember -> taskAssignmentRepo.deleteByProjectMemberId(projectMember.getId()));
+
+            //delete the member project relations for the user
+            memberOf.forEach(projectMember -> projectMemberRepo.deleteByProjectIdAndUserId(projectMember.getProject().getId(),id));
+
             userRepo.deleteById(id);
         }
         else
@@ -133,6 +140,19 @@ public class UserService
     {
         User currentUser = getLoggedInUser();
         return (currentUser.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_ADMIN")));
+    }
+
+    @Transactional
+    public void makeAdmin(Long userId)
+    {
+        User user = getUserById(userId);
+        if(user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_ADMIN")))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already an admin");
+
+        Role admin = roleRepo.findByName("ROLE_ADMIN").orElseThrow(() ->
+            new IllegalStateException("The role admin hasn't been initialized")
+        );
+        user.getRoles().add(admin);
     }
 
 }

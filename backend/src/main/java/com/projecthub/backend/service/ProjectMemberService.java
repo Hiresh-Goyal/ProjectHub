@@ -8,7 +8,9 @@ import com.projecthub.backend.model.Project;
 import com.projecthub.backend.model.ProjectMember;
 import com.projecthub.backend.model.User;
 import com.projecthub.backend.repository.ProjectMemberRepo;
+import com.projecthub.backend.repository.TaskAssignmentRepo;
 import com.projecthub.backend.repository.UserRepo;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,13 +25,15 @@ public class ProjectMemberService
     private final ProjectService projectService;
     private final ProjectMemberRepo  projectMemberRepo;
     private final ProjectMemberMapper projectMemberMapper;
+    private final TaskAssignmentRepo  taskAssignmentRepo;
 
-    public ProjectMemberService(UserService userService, UserRepo userRepo, ProjectService projectService, ProjectMemberRepo projectMemberRepo, ProjectMemberMapper projectMemberMapper) {
+    public ProjectMemberService(UserService userService, UserRepo userRepo, ProjectService projectService, ProjectMemberRepo projectMemberRepo, ProjectMemberMapper projectMemberMapper, TaskAssignmentRepo taskAssignmentRepo) {
         this.userService = userService;
         this.userRepo = userRepo;
         this.projectService = projectService;
         this.projectMemberRepo = projectMemberRepo;
         this.projectMemberMapper = projectMemberMapper;
+        this.taskAssignmentRepo = taskAssignmentRepo;
     }
 
     public ProjectMemberResponse addProjectMember(ProjectMemberRequest projectMemberRequest, Long projectId)
@@ -66,25 +70,21 @@ public class ProjectMemberService
 
     public ProjectMember getProjectMember(Long projectId, Long userId)
     {
-        Project project = projectService.getProjectById(projectId);
+        projectService.getProjectById(projectId);
         User currentUser = userService.getLoggedInUser();
-        if(userService.isAdmin() || currentUser.getId().equals(userId) || project.getOwner().getId().equals(currentUser.getId()))
+        if(projectService.isProjectOwnerOrAdmin(projectId) || currentUser.getId().equals(userId))
             return projectMemberRepo.findByProjectIdAndUserId(projectId,userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The user " + userId + " is not a member in project " + projectId));
 
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to get other members of project");
     }
 
-    private void isProjectMember(Long projectId, Long userId)
-    {
-        if(!projectMemberRepo.existsByProjectIdAndUserId(projectId,userId))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "The user " + userId + " is not a member in project " + projectId);
-    }
-
+    @Transactional
     public void removeProjectMember(Long projectId, Long userId)
     {
         if(projectService.isProjectOwnerOrAdmin(projectId)) {
-            isProjectMember(projectId, userId);
+            ProjectMember projectMember = getProjectMember(projectId, userId);
+            taskAssignmentRepo.deleteByProjectMemberId(projectMember.getId());
             projectMemberRepo.deleteByProjectIdAndUserId(projectId,userId);
         }
         else
@@ -95,5 +95,12 @@ public class ProjectMemberService
     {
         User user = userService.getLoggedInUser();
         return projectMemberRepo.findAllByUserId(user.getId());
+    }
+
+    public ProjectMember getMemberByProjectMemberId(Long projectMemberId)
+    {
+        return projectMemberRepo.findById(projectMemberId).orElseThrow( () ->
+            new ResponseStatusException(HttpStatus.NOT_FOUND, "The projectMember id :  " + projectMemberId + " does not exist"));
+
     }
 }
