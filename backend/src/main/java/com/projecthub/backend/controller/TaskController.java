@@ -2,6 +2,7 @@ package com.projecthub.backend.controller;
 
 import com.projecthub.backend.dto.TaskRequest;
 import com.projecthub.backend.dto.TaskResponse;
+import com.projecthub.backend.dto.TaskStatus;
 import com.projecthub.backend.mapper.TaskMapper;
 import com.projecthub.backend.model.Task;
 import com.projecthub.backend.service.TaskService;
@@ -53,8 +54,13 @@ public class TaskController
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable long id)
     {
-        taskService.getTaskById(id);
         taskService.deleteTask(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PatchMapping("/tasks/{id}/status")
+    public ResponseEntity<TaskResponse> updateStatus(@Valid @RequestBody TaskStatus taskStatus, @PathVariable long id)
+    {
+        return ResponseEntity.ok(taskService.updateStatus(taskStatus, id));
     }
 }

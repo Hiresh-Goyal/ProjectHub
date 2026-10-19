@@ -2,6 +2,7 @@ package com.projecthub.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -21,5 +22,6 @@ public class TaskRequest
     private String priority;
     private LocalDate dueDate;
     @NotNull(message = "Project Id is required")
+    @Positive
     private Long projectId;
 }

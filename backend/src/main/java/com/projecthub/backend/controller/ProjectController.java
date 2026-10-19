@@ -8,7 +8,6 @@ import com.projecthub.backend.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,11 +49,8 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.updateProject(projectRequest, id));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/projects/{id}")
     public ResponseEntity<Void> deleteProject(@PathVariable long id) {
-        projectService.getProjectById(id);
-
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }

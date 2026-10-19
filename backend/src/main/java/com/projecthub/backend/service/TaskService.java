@@ -2,17 +2,21 @@ package com.projecthub.backend.service;
 
 import com.projecthub.backend.dto.TaskRequest;
 import com.projecthub.backend.dto.TaskResponse;
+import com.projecthub.backend.dto.TaskStatus;
 import com.projecthub.backend.exception.TaskNotFoundException;
 import com.projecthub.backend.mapper.TaskMapper;
 import com.projecthub.backend.model.Project;
+import com.projecthub.backend.model.ProjectMember;
 import com.projecthub.backend.model.Task;
 import com.projecthub.backend.model.User;
+import com.projecthub.backend.repository.ProjectMemberRepo;
 import com.projecthub.backend.repository.TaskRepo;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,18 +26,37 @@ public class TaskService
     private final ProjectService projectService;
     private final TaskMapper taskMapper;
     private final UserService userService;
+    private final ProjectMemberRepo projectMemberRepo;
 
 
-    public TaskService(TaskRepo taskRepo, ProjectService projectService, TaskMapper taskMapper, UserService userService) {
+    public TaskService(TaskRepo taskRepo, ProjectService projectService, TaskMapper taskMapper, UserService userService, ProjectMemberRepo projectMemberRepo) {
         this.taskRepo = taskRepo;
         this.projectService = projectService;
         this.taskMapper = taskMapper;
         this.userService = userService;
+        this.projectMemberRepo = projectMemberRepo;
     }
 
     public List<Task> getTasks() {
-        User user = userService.getLoggedInUser();
-        return taskRepo.findByProjectOwnerId(user.getId());
+        User currentUser = userService.getLoggedInUser();
+        List<ProjectMember> projectMembers = projectMemberRepo.findAllByUserId(currentUser.getId());
+
+        if(userService.isAdmin())
+            return taskRepo.findAll();
+
+        List<Task> memberTasks =  projectMembers
+                .stream()
+                .map(ProjectMember::getProject)
+                .map(project -> taskRepo.findByProjectId(project.getId()))
+                .flatMap(List::stream)
+                .toList();
+
+        List<Task> ownerTasks = taskRepo.findByProjectOwnerId(currentUser.getId());
+
+        List<Task> allTasks = new ArrayList<>(memberTasks);
+        allTasks.addAll(ownerTasks);
+
+        return  allTasks;
     }
 
     public Task getTaskById(Long id)
@@ -41,8 +64,8 @@ public class TaskService
         User currentUser =  userService.getLoggedInUser();
         Task task = taskRepo.findById(id).orElseThrow(() ->
                 new TaskNotFoundException("Task Not Found with ID : " + id));
-        if(task.getProject().getOwner().getId().equals(currentUser.getId()) ||
-                (currentUser.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_ADMIN"))))
+        if((projectService.isProjectOwnerOrAdmin(task.getProject().getId())) ||
+                (projectMemberRepo.existsByProjectIdAndUserId(task.getProject().getId(), currentUser.getId())))
             return task;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view this task");
     }
@@ -50,22 +73,41 @@ public class TaskService
     public TaskResponse addTask(TaskRequest taskRequest)
     {
         Task task = taskMapper.toTask(taskRequest);
-        Project project = projectService.getProjectById(taskRequest.getProjectId());
-        task.setProject(project);
-        Task savedTask = taskRepo.save(task);
-        return taskMapper.toTaskResponse(savedTask);
+        if(projectService.isProjectOwnerOrAdmin(taskRequest.getProjectId())) {
+            Project project = projectService.getProjectById(taskRequest.getProjectId());
+            task.setProject(project);
+            Task savedTask = taskRepo.save(task);
+            return taskMapper.toTaskResponse(savedTask);
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this project");
     }
 
     @Transactional
     public TaskResponse updateTask(TaskRequest taskRequest, long id) {
         Task existingTask = getTaskById(id);
-        taskMapper.updateTask(taskRequest, existingTask);
-        existingTask.setProject(projectService.getProjectById(taskRequest.getProjectId()));
+        if(projectService.isProjectOwnerOrAdmin(existingTask.getProject().getId()) &&
+                (projectService.isProjectOwnerOrAdmin(taskRequest.getProjectId()))) {
+            taskMapper.updateTask(taskRequest, existingTask);
+            existingTask.setProject(projectService.getProjectById(taskRequest.getProjectId()));
+            return taskMapper.toTaskResponse(existingTask);
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to update this task");
+    }
+
+    @Transactional
+    public TaskResponse updateStatus(TaskStatus taskStatus, long id){
+        Task existingTask = getTaskById(id);
+        existingTask.setStatus(taskStatus.getStatus());
         return taskMapper.toTaskResponse(existingTask);
     }
 
+    @Transactional
     public void deleteTask(long id)
     {
-        taskRepo.deleteById(id);
+        Task task = getTaskById(id);
+        if(projectService.isProjectOwnerOrAdmin(task.getProject().getId()))
+            taskRepo.deleteById(id);
+        else
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete this task");
     }
 }

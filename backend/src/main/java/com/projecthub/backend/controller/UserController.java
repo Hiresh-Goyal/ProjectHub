@@ -64,14 +64,7 @@ public class UserController
     @PreAuthorize("hasRole('ADMIN') or @userService.boolOwnership(#id)")
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id){
-        userService.getUserById(id);
         userService.deleteUser(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
-
-    @GetMapping("/both")
-    @PreAuthorize("hasAllRoles('ADMIN', 'USER')")
-    public ResponseEntity<String> getBoth(){
-        return ResponseEntity.ok("Both roles were present");
     }
 }
