@@ -1,10 +1,13 @@
 package com.projecthub.backend.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class TaskStatus {
-    @NotBlank(message = "Task status is required")
-    private String status;
+    @NotNull(message = "Task status cannot be null")
+    @Enumerated(EnumType.STRING)
+    private com.projecthub.backend.enums.TaskStatus status;
 }

@@ -26,7 +26,7 @@ public class TaskMapper
     public TaskResponse toTaskResponse(Task task)
     {
         return new TaskResponse(task.getId(),task.getTitle(),task.getDescription(),
-                task.getStatus(),task.getPriority(),task.getDueDate(),task.getProject().getId());
+                task.getStatus().name(),task.getPriority().name(),task.getDueDate(),task.getProject().getId());
     }
 
     public void updateTask(TaskRequest taskRequest, Task existingTask)

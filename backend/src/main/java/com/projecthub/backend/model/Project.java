@@ -1,7 +1,9 @@
 package com.projecthub.backend.model;
 
+import com.projecthub.backend.enums.ProjectStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -20,8 +22,9 @@ public class Project
     @Size(max = 100, message = "Name should not exceed 100 char")
     private String name;
 
-    @NotBlank(message = "Project status cannot be blank")
-    private String status;
+    @NotNull(message = "Project status cannot be null")
+    @Enumerated(EnumType.STRING)
+    private ProjectStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)

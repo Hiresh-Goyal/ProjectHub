@@ -18,6 +18,7 @@ public class CreateUserRequest
     private String email;
 
     @NotBlank(message = "User password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
     @Size(max = 50, message = "User Password cannot exceed 50 characters")
     private String password;
 }

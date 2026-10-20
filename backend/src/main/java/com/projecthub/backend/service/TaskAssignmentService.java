@@ -33,8 +33,10 @@ public class TaskAssignmentService {
         ProjectMember projectMember = projectMemberService.getMemberByProjectMemberId(taskAssignmentRequest.getProjectMemberId());
         Task task = taskService.getTaskById(taskId);
 
-        if((projectService.isProjectOwnerOrAdmin(projectMember.getProject().getId())) && (task.getProject().getId().equals(projectMember.getProject().getId())))
+        if(projectService.isProjectOwnerOrAdmin(projectMember.getProject().getId()))
         {
+            if(!(task.getProject().getId().equals(projectMember.getProject().getId())))
+                throw new  ResponseStatusException(HttpStatus.FORBIDDEN, "User belongs to a different project");
             TaskAssignment taskAssignment = new TaskAssignment();
             taskAssignment.setProjectMember(projectMember);
             taskAssignment.setTask(task);

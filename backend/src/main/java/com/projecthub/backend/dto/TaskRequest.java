@@ -1,5 +1,9 @@
 package com.projecthub.backend.dto;
 
+import com.projecthub.backend.enums.TaskPriority;
+import com.projecthub.backend.enums.TaskStatus;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -16,10 +20,12 @@ public class TaskRequest
     private String title;
     @Size(max = 1000, message = "Task description cannot exceed 1000 characters")
     private String description;
-    @NotBlank(message = "Task status is required")
-    private String status;
-    @NotBlank(message = "Task priority is required")
-    private String priority;
+    @NotNull(message = "Task status cannot be null")
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
+    @NotNull(message = "Task priority cannot be null")
+    @Enumerated(EnumType.STRING)
+    private TaskPriority priority;
     private LocalDate dueDate;
     @NotNull(message = "Project Id is required")
     @Positive

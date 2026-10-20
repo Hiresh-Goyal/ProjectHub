@@ -11,7 +11,7 @@ import java.util.List;
 public class ProjectMapper
 {
     public ProjectResponse toProjectResponse(Project project) {
-        return new ProjectResponse(project.getId(), project.getName(), project.getStatus());
+        return new ProjectResponse(project.getId(), project.getName(), project.getStatus().name());
     }
 
     public Project toProject(ProjectRequest projectRequest) {
