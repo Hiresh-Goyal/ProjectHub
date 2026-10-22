@@ -33,7 +33,7 @@ public class TaskAssignmentService {
         ProjectMember projectMember = projectMemberService.getMemberByProjectMemberId(taskAssignmentRequest.getProjectMemberId());
         Task task = taskService.getTaskById(taskId);
 
-        if(projectService.isProjectOwnerOrAdmin(projectMember.getProject().getId()))
+        if(projectService.isOwnerOrGlobalAdmin(projectMember.getProject().getId()))
         {
             if(!(task.getProject().getId().equals(projectMember.getProject().getId())))
                 throw new  ResponseStatusException(HttpStatus.FORBIDDEN, "User belongs to a different project");
@@ -76,7 +76,7 @@ public class TaskAssignmentService {
     public void removeAssignedTask(Long taskAssignmentId)
     {
         TaskAssignment taskAssignment = getTaskAssignment(taskAssignmentId);
-        if(projectService.isProjectOwnerOrAdmin(taskAssignment.getTask().getProject().getId())) {
+        if(projectService.isOwnerOrGlobalAdmin(taskAssignment.getTask().getProject().getId())) {
             taskAssignmentRepo.delete(taskAssignment);
         }
         else

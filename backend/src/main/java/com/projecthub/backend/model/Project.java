@@ -29,4 +29,8 @@ public class Project
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 }

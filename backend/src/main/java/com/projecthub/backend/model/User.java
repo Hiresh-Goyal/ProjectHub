@@ -1,5 +1,6 @@
 package com.projecthub.backend.model;
 
+import com.projecthub.backend.enums.CompanyRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -48,4 +49,11 @@ public class User
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    @ManyToOne
+    @JoinColumn(name = "company_id")
+    private Company company;
+
+    @Enumerated(EnumType.STRING)
+    private CompanyRole companyRole;
 }

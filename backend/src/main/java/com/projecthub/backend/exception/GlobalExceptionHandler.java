@@ -140,10 +140,11 @@ public class GlobalExceptionHandler {
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                ex.getMessage(),
+                "Invalid Request Body",
                 new java.util.Date()
         );
 
+        log.info("Invalid request body {}",  ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 

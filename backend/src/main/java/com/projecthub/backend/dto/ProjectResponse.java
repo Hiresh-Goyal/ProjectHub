@@ -12,4 +12,7 @@ public class ProjectResponse
     private Long id;
     private String name;
     private String status;
+    private Long companyId;
+    private String companyName;
+    private Long ownerId;
 }

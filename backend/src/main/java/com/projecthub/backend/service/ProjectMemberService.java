@@ -38,12 +38,16 @@ public class ProjectMemberService
 
     public ProjectMemberResponse addProjectMember(ProjectMemberRequest projectMemberRequest, Long projectId)
     {
-        if(projectService.isProjectOwnerOrAdmin(projectId)) {
+        if(projectService.isOwnerOrGlobalAdmin(projectId)) {
             ProjectMember projectMember = new ProjectMember();
             User user = userRepo.findById(projectMemberRequest.getUserId()).orElseThrow( () ->
                     new UserNotFoundException("User not found with id : " + projectMemberRequest.getUserId())
             );
             Project project = projectService.getProjectById(projectId);
+            if(user.getCompany() == null)
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,"user does not belong to a company");
+            if(!projectService.sameCompany(project, user))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project member is not in same company");
             projectMember.setUser(user);
             projectMember.setProject(project);
 
@@ -62,7 +66,8 @@ public class ProjectMemberService
 
     public List<ProjectMember> getProjectMembers(Long projectId)
     {
-        if(projectService.isProjectOwnerOrAdmin(projectId)) {
+        if(projectService.isOwnerOrGlobalAdmin(projectId)){
+            projectService.getProjectById(projectId);
             return projectMemberRepo.findAllByProjectId(projectId);
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this project");
@@ -72,7 +77,7 @@ public class ProjectMemberService
     {
         projectService.getProjectById(projectId);
         User currentUser = userService.getLoggedInUser();
-        if(projectService.isProjectOwnerOrAdmin(projectId) || currentUser.getId().equals(userId))
+        if(projectService.isOwnerOrGlobalAdmin(projectId) || currentUser.getId().equals(userId))
             return projectMemberRepo.findByProjectIdAndUserId(projectId,userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The user " + userId + " is not a member in project " + projectId));
 
@@ -82,7 +87,8 @@ public class ProjectMemberService
     @Transactional
     public void removeProjectMember(Long projectId, Long userId)
     {
-        if(projectService.isProjectOwnerOrAdmin(projectId)) {
+        if(projectService.isOwnerOrGlobalAdmin(projectId)) {
+            projectService.getProjectById(projectId);
             ProjectMember projectMember = getProjectMember(projectId, userId);
             taskAssignmentRepo.deleteByProjectMemberId(projectMember.getId());
             projectMemberRepo.deleteByProjectIdAndUserId(projectId,userId);
@@ -93,8 +99,13 @@ public class ProjectMemberService
 
     public List<ProjectMember> getUserProjects()
     {
-        User user = userService.getLoggedInUser();
-        return projectMemberRepo.findAllByUserId(user.getId());
+        User currentUser = userService.getLoggedInUser();
+        if(currentUser.getCompany() == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not part of any company hence you have no projects");
+
+        return projectMemberRepo.findAllByUserId(currentUser.getId()).stream()
+                .filter(projectMember -> projectService.sameCompany(projectMember.getProject(), currentUser))
+                .toList();
     }
 
     public ProjectMember getMemberByProjectMemberId(Long projectMemberId)

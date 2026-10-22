@@ -21,13 +21,25 @@ public class UserMapper
 
     public UserResponse toUserResponse(User user)
     {
-        return new UserResponse(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getCreatedAt(),
-                user.getUpdatedAt()
-        );
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setCreatedAt(user.getCreatedAt());
+        response.setUpdatedAt(user.getUpdatedAt());
+        if(user.getCompany() == null)
+        {
+            response.setCompanyId(null);
+            response.setCompanyName(null);
+            response.setCompanyRole(null);
+        }
+        else
+        {
+            response.setCompanyId(user.getCompany().getId());
+            response.setCompanyName(user.getCompany().getName());
+            response.setCompanyRole(user.getCompanyRole());
+        }
+        return response;
     }
 
     public void updateUser(UpdateUserRequest updateUserRequest, User existingUser)

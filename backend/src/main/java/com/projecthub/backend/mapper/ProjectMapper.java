@@ -11,7 +11,17 @@ import java.util.List;
 public class ProjectMapper
 {
     public ProjectResponse toProjectResponse(Project project) {
-        return new ProjectResponse(project.getId(), project.getName(), project.getStatus().name());
+        Long companyId = project.getCompany() == null ? null : project.getCompany().getId();
+        String companyName = project.getCompany() == null ? null : project.getCompany().getName();
+        Long ownerId = project.getOwner() == null ? null : project.getOwner().getId();
+        return new ProjectResponse(
+                project.getId(),
+                project.getName(),
+                project.getStatus() == null ? null : project.getStatus().name(),
+                companyId,
+                companyName,
+                ownerId
+        );
     }
 
     public Project toProject(ProjectRequest projectRequest) {

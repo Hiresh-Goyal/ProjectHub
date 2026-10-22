@@ -1,5 +1,6 @@
 package com.projecthub.backend.repository;
 
+import com.projecthub.backend.model.Company;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,5 @@ import java.util.List;
 public interface ProjectRepo extends JpaRepository<Project,Long>
 {
     List<Project> findAllByOwner(User owner);
+    List<Project> findAllByCompany(Company company);
 }

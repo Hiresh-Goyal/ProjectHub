@@ -8,10 +8,12 @@ import lombok.Data;
 public class UpdatePasswordRequest
 {
     @NotBlank(message = "Current password is required")
-    @Size(max = 50, message = "Current Password cannot exceed 50 characters")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Size(max = 50, message = "User Password cannot exceed 50 characters")
     private String currentPass;
 
     @NotBlank(message = "New password is required")
-    @Size(max = 50, message = "New Password cannot exceed 50 characters")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Size(max = 50, message = "User Password cannot exceed 50 characters")
     private String newPass;
 }

@@ -27,7 +27,6 @@ public class UserController
         this.userMapper = userMapper;
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<List<UserResponse>> getUsers(){
         List<User> users = userService.getUsers();
@@ -72,4 +71,5 @@ public class UserController
     public ResponseEntity<UserResponse> getCurrentUser(){
         return ResponseEntity.ok(userMapper.toUserResponse(userService.getLoggedInUser()));
     }
+
 }

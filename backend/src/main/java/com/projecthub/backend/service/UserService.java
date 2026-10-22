@@ -4,13 +4,11 @@ import com.projecthub.backend.dto.CreateUserRequest;
 import com.projecthub.backend.dto.UpdatePasswordRequest;
 import com.projecthub.backend.dto.UpdateUserRequest;
 import com.projecthub.backend.dto.UserResponse;
+import com.projecthub.backend.enums.CompanyRole;
 import com.projecthub.backend.exception.DuplicateUserEmailException;
 import com.projecthub.backend.exception.UserNotFoundException;
 import com.projecthub.backend.mapper.UserMapper;
-import com.projecthub.backend.model.Project;
-import com.projecthub.backend.model.ProjectMember;
-import com.projecthub.backend.model.Role;
-import com.projecthub.backend.model.User;
+import com.projecthub.backend.model.*;
 import com.projecthub.backend.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
@@ -21,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class UserService
@@ -44,16 +43,63 @@ public class UserService
     }
 
     public List<User> getUsers(){
-        if(isAdmin())
+        if(isGlobalAdmin())
             return userRepo.findAll();
+        else if(isCompanyOwner()) {
+            List<User> employees = userRepo.findAllByCompany(getLoggedInUser().getCompany());
+            List<User> noCompany = userRepo.findAllByCompany(null);
+            employees.addAll(noCompany);
+            return employees;
+        }
+        User currentUser = getLoggedInUser();
+        Company company = currentUser.getCompany();
+        if(company == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view all users");
+
+        List<Project> projects = projectRepo.findAllByCompany(company);
+        List<Project> ownedProjects = projects.stream()
+                .filter(project -> Objects.equals(project.getOwner().getId(), currentUser.getId()))
+                .toList();
+        if(!ownedProjects.isEmpty())
+        {
+            return projects.stream()
+                    .map(project -> projectMemberRepo.findAllByProjectId(project.getId()))
+                    .flatMap(List::stream)
+                    .distinct()
+                    .map(ProjectMember::getUser)
+                    .toList();
+        }
+
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view all users");
     }
 
     public User getUserById(long id){
-        if(boolOwnership(id) || isAdmin())
-            return userRepo.findById(id).orElseThrow(() ->
-                    new UserNotFoundException("User not found with id : " + id)
-            );
+
+        User currentUser = getLoggedInUser();
+        List<ProjectMember> projectMembers = projectMemberRepo.findAllByUserId(id);
+
+        boolean projectOwner = false;
+        if(!projectMembers.isEmpty())
+            projectOwner = projectMembers.stream()
+                    .map(projectMember -> Objects.equals(projectMember.getProject().getOwner().getId(), currentUser.getId()))
+                    .toList()
+                    .contains(true);
+
+
+        User user = userRepo.findById(id).orElseThrow(() ->
+                new UserNotFoundException("User not found with id : " + id));
+
+        boolean companyOwner = false;
+        if(user.getCompany() != null && currentUser.getCompany() != null)
+            companyOwner = ((Objects.equals(currentUser.getCompany().getId(), user.getCompany().getId())) && (isCompanyOwner()));
+
+
+        //your own OR
+        // you are global admin OR
+        // you are owner of a project which this guy is a part of OR
+        // you are owner of company this guy is member in
+        if(boolOwnership(id) || isGlobalAdmin() || projectOwner || companyOwner)
+            return user;
         else
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this user record");
     }
@@ -94,16 +140,30 @@ public class UserService
     @Transactional
     public void updatePassword(UpdatePasswordRequest updatePasswordRequest, long id){
         User existingUser = getUserById(id);
-        if (!encoder.matches(
-                updatePasswordRequest.getCurrentPass(),
-                existingUser.getPassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Current password is incorrect"
-            );
+        User user = getLoggedInUser();
+
+        if((isGlobalAdmin() && !Objects.equals(user.getId(), existingUser.getId())) &&
+                existingUser.getRoles().stream().noneMatch(role -> role.getName().equals("ROLE_ADMIN"))){
+
+            existingUser.setPassword(encoder.encode(updatePasswordRequest.getNewPass()));
+            return;
         }
 
-        existingUser.setPassword(encoder.encode(updatePasswordRequest.getNewPass()));
+
+        if(Objects.equals(getLoggedInUser().getId(), existingUser.getId())) {
+            if (!encoder.matches(
+                    updatePasswordRequest.getCurrentPass(),
+                    existingUser.getPassword())) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Current password is incorrect"
+                );
+            }
+
+            existingUser.setPassword(encoder.encode(updatePasswordRequest.getNewPass()));
+        }
+        else
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You are not allowed to change this users password");
     }
 
     public User getLoggedInUser()
@@ -116,10 +176,14 @@ public class UserService
 
     @Transactional
     public void  deleteUser(long id){
-        User currentUser = getUserById(id);
-        List<Project> ownedProjects = projectRepo.findAllByOwner(currentUser);
-        if(ownedProjects.isEmpty()) {
-            List<ProjectMember> memberOf =projectMemberRepo.findAllByUserId(currentUser.getId());
+        User user = getUserById(id);
+        List<Project> ownedProjects = projectRepo.findAllByOwner(user);
+
+        if(user.getCompanyRole() == CompanyRole.COMPANY_ADMIN)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is owner of a company");
+
+        if((ownedProjects.isEmpty())) {
+            List<ProjectMember> memberOf =projectMemberRepo.findAllByUserId(user.getId());
 
             //delete all taskAssignment for project member
             memberOf.forEach(projectMember -> taskAssignmentRepo.deleteByProjectMemberId(projectMember.getId()));
@@ -136,10 +200,16 @@ public class UserService
             );
     }
 
-    public boolean isAdmin()
+    public boolean isGlobalAdmin()
     {
         User currentUser = getLoggedInUser();
         return (currentUser.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_ADMIN")));
+    }
+
+    public boolean isCompanyOwner()
+    {
+        User currentUser = getLoggedInUser();
+        return (currentUser.getCompanyRole() == CompanyRole.COMPANY_ADMIN);
     }
 
     @Transactional
@@ -154,5 +224,7 @@ public class UserService
         );
         user.getRoles().add(admin);
     }
+
+
 
 }

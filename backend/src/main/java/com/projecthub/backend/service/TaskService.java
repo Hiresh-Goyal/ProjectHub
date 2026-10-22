@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TaskService
@@ -44,17 +45,33 @@ public class TaskService
         User currentUser = userService.getLoggedInUser();
         List<ProjectMember> projectMembers = projectMemberRepo.findAllByUserId(currentUser.getId());
 
-        if(userService.isAdmin())
+        if(userService.isGlobalAdmin())
             return taskRepo.findAll();
+
+        if(currentUser.getCompany() == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not belong to a company hence you have no tasks");
+        if(userService.isCompanyOwner())
+        {
+            List<Project> projects = projectService.getProjects();
+
+            return projects
+                    .stream()
+                    .map(project -> taskRepo.findByProjectId(project.getId()))
+                    .flatMap(List::stream)
+                    .toList();
+        }
 
         List<Task> memberTasks =  projectMembers
                 .stream()
                 .map(ProjectMember::getProject)
                 .map(project -> taskRepo.findByProjectId(project.getId()))
                 .flatMap(List::stream)
+                .filter(task -> projectService.sameCompany(task.getProject(), currentUser))
                 .toList();
 
-        List<Task> ownerTasks = taskRepo.findByProjectOwnerId(currentUser.getId());
+        List<Task> ownerTasks = taskRepo.findByProjectOwnerId(currentUser.getId()).stream()
+                .filter(task -> projectService.sameCompany(task.getProject(), currentUser))
+                .toList();
 
         List<Task> allTasks = new ArrayList<>(memberTasks);
         allTasks.addAll(ownerTasks);
@@ -64,11 +81,9 @@ public class TaskService
 
     public Task getTaskById(Long id)
     {
-        User currentUser =  userService.getLoggedInUser();
         Task task = taskRepo.findById(id).orElseThrow(() ->
                 new TaskNotFoundException("Task Not Found with ID : " + id));
-        if((projectService.isProjectOwnerOrAdmin(task.getProject().getId())) ||
-                (projectMemberRepo.existsByProjectIdAndUserId(task.getProject().getId(), currentUser.getId())))
+        if(projectService.isOwnerOrMemberOrGlobalAdmin(task.getProject()))
             return task;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view this task");
     }
@@ -76,7 +91,7 @@ public class TaskService
     public TaskResponse addTask(TaskRequest taskRequest)
     {
         Task task = taskMapper.toTask(taskRequest);
-        if(projectService.isProjectOwnerOrAdmin(taskRequest.getProjectId())) {
+        if(projectService.isOwnerOrGlobalAdmin(taskRequest.getProjectId())) {
             Project project = projectService.getProjectById(taskRequest.getProjectId());
             task.setProject(project);
             Task savedTask = taskRepo.save(task);
@@ -88,17 +103,24 @@ public class TaskService
     @Transactional
     public TaskResponse updateTask(TaskRequest taskRequest, long id) {
         Task existingTask = getTaskById(id);
-        if(projectService.isProjectOwnerOrAdmin(existingTask.getProject().getId()) &&
-                (projectService.isProjectOwnerOrAdmin(taskRequest.getProjectId()))) {
+        Project project = projectService.getProjectById(taskRequest.getProjectId());
 
-            if(!(existingTask.getProject().getId().equals(taskRequest.getProjectId())) && (taskAssignmentRepo.existsByTaskId(id)))
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot move task to another project as it has assigned people");
+        if(!Objects.equals(existingTask.getProject().getCompany().getId(), project.getCompany().getId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tasks cannot be moved between companies");
 
+
+        if(!(existingTask.getProject().getId().equals(taskRequest.getProjectId())) && (taskAssignmentRepo.existsByTaskId(id)))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot move task to another project as it has assigned people");
+
+        if(projectService.isOwnerOrGlobalAdmin(taskRequest.getProjectId()) &&
+                projectService.isOwnerOrGlobalAdmin(existingTask.getProject().getId()))
+        {
             taskMapper.updateTask(taskRequest, existingTask);
-            existingTask.setProject(projectService.getProjectById(taskRequest.getProjectId()));
+            existingTask.setProject(project);
             return taskMapper.toTaskResponse(existingTask);
         }
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to update this task");
+        else
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to move task between projects");
     }
 
     @Transactional
@@ -112,7 +134,7 @@ public class TaskService
     public void deleteTask(long id)
     {
         Task task = getTaskById(id);
-        if(projectService.isProjectOwnerOrAdmin(task.getProject().getId())) {
+        if(projectService.isOwnerOrGlobalAdmin(task.getProject().getId())) {
             taskAssignmentRepo.deleteByTaskId(id);
             taskRepo.deleteById(id);
         }
