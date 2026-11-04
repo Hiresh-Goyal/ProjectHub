@@ -12,6 +12,7 @@ public interface TaskAssignmentRepo extends JpaRepository<TaskAssignment, Long> 
     boolean existsByTaskId(Long taskId);
     List<TaskAssignment> findAllByTaskId(Long taskId);
     List<TaskAssignment> findAllByProjectMemberId(Long projectMemberId);
+    List<TaskAssignment> findAllByProjectMember_Project_Id(Long projectMemberProjectId);
     void deleteByTaskId(Long taskId);
     void deleteByProjectMemberId(Long projectMemberId);
 }

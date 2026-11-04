@@ -17,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +32,6 @@ public class TaskService
     private final UserService userService;
     private final ProjectMemberRepo projectMemberRepo;
     private final TaskAssignmentRepo taskAssignmentRepo;
-
 
     public TaskService(TaskRepo taskRepo, ProjectService projectService, TaskMapper taskMapper, UserService userService, ProjectMemberRepo projectMemberRepo, TaskAssignmentRepo taskAssignmentRepo) {
         this.taskRepo = taskRepo;
@@ -140,5 +141,18 @@ public class TaskService
         }
         else
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete this task");
+    }
+
+    public List<TaskResponse> getTaskByProjectID(Long projectId)
+    {
+        // company owner or global admin or member of project
+        projectService.getProjectById(projectId);
+        List<Task> tasksOfProject = taskRepo.findByProjectId(projectId);
+        return taskMapper.toTaskResponses(tasksOfProject);
+    }
+
+    public boolean isTaskOverdue(TaskResponse taskResponse)
+    {
+        return ((taskResponse.getDueDate() != null) && (taskResponse.getStatus() != (com.projecthub.backend.enums.TaskStatus.COMPLETED)) && (taskResponse.getDueDate().isBefore(LocalDate.now(ZoneId.of("Asia/Kolkata")))));
     }
 }

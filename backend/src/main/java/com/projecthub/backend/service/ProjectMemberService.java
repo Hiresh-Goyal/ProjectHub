@@ -76,12 +76,8 @@ public class ProjectMemberService
     public ProjectMember getProjectMember(Long projectId, Long userId)
     {
         projectService.getProjectById(projectId);
-        User currentUser = userService.getLoggedInUser();
-        if(projectService.isOwnerOrGlobalAdmin(projectId) || currentUser.getId().equals(userId))
-            return projectMemberRepo.findByProjectIdAndUserId(projectId,userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The user " + userId + " is not a member in project " + projectId));
-
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to get other members of project");
+        return projectMemberRepo.findByProjectIdAndUserId(projectId,userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The user " + userId + " is not a member in project " + projectId));
     }
 
     @Transactional

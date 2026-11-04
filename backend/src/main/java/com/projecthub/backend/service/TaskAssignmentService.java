@@ -82,4 +82,16 @@ public class TaskAssignmentService {
         else
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete task assignment");
     }
+
+    public List<TaskAssignmentResponse> getTaskAssignments(Long projectId)
+    {
+        //owner or global admin
+        if(!projectService.isOwnerOrGlobalAdmin(projectId))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to get task assignments");
+
+        List<TaskAssignment> taskAssignments = taskAssignmentRepo.findAllByProjectMember_Project_Id(projectId);
+
+        return taskAssignments.stream().map(taskAssignmentMapper::toTaskAssignmentResponse).toList();
+
+    }
 }

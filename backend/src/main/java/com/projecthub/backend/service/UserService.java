@@ -62,12 +62,7 @@ public class UserService
                 .toList();
         if(!ownedProjects.isEmpty())
         {
-            return projects.stream()
-                    .map(project -> projectMemberRepo.findAllByProjectId(project.getId()))
-                    .flatMap(List::stream)
-                    .distinct()
-                    .map(ProjectMember::getUser)
-                    .toList();
+            return userRepo.findAllByCompany(company);
         }
 
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view all users");
@@ -225,6 +220,13 @@ public class UserService
         user.getRoles().add(admin);
     }
 
+    public List<User> getGlobalAdmins()
+    {
+        if(!isGlobalAdmin())
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to view all the admin");
+
+        return userRepo.findDistinctByRoles_Name("ROLE_ADMIN");
+    }
 
 
 }
