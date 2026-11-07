@@ -25,5 +25,5 @@ public class ProjectWorkloadResponse {
     private int overdueTasks;
     private List<TaskResponse> overdueTaskDetails = new ArrayList<>();
     private Map<TaskStatus,Integer> overallStatusCounts;
-    private List<MemberWorkloadResponse> members;
+    private List<MemberWorkloadResponse> members = new ArrayList<>();
 }

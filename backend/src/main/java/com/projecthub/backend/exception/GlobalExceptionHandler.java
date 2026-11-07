@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -144,6 +145,32 @@ public class GlobalExceptionHandler {
                 new java.util.Date()
         );
 
+        log.info("Invalid request body {}",  ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public GlobalErrorResponse handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
+        log.info("Method Not Allowed Exception {}", ex.getMessage());
+        return errorResponse;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<GlobalErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex)
+    {
+        GlobalErrorResponse errorResponse = new GlobalErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                new java.util.Date()
+        );
         log.info("Invalid request body {}",  ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }

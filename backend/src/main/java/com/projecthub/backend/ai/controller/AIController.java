@@ -22,9 +22,6 @@ public class AIController {
 
     @PostMapping("/chat")
     public ResponseEntity<ChatResponse> chat(@Valid @RequestBody ChatRequest chatRequest) {
-        return aiChatService.generatedResponse(chatRequest.getMessage());
+        return aiChatService.generatedResponse(chatRequest.getMessage(), chatRequest.getConversationId());
     }
-
-
-
 }

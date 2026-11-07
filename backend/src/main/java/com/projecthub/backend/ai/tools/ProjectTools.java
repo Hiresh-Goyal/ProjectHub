@@ -1,46 +1,44 @@
 package com.projecthub.backend.ai.tools;
 
-import com.projecthub.backend.ai.dto.MemberWorkloadResponse;
 import com.projecthub.backend.ai.dto.ProjectWorkloadResponse;
-import com.projecthub.backend.dto.ProjectMemberResponse;
-import com.projecthub.backend.dto.ProjectResponse;
-import com.projecthub.backend.dto.TaskAssignmentResponse;
-import com.projecthub.backend.dto.TaskResponse;
-import com.projecthub.backend.enums.TaskPriority;
-import com.projecthub.backend.enums.TaskStatus;
-import com.projecthub.backend.mapper.ProjectMapper;
-import com.projecthub.backend.mapper.ProjectMemberMapper;
-import com.projecthub.backend.mapper.TaskAssignmentMapper;
-import com.projecthub.backend.mapper.TaskMapper;
+import com.projecthub.backend.ai.service.ProjectWorkloadService;
+import com.projecthub.backend.dto.*;
+import com.projecthub.backend.mapper.*;
 import com.projecthub.backend.model.Project;
 import com.projecthub.backend.model.ProjectMember;
 import com.projecthub.backend.model.TaskAssignment;
+import com.projecthub.backend.model.User;
 import com.projecthub.backend.service.*;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.List;
 
 
 @Component
 public class ProjectTools {
-
-    private final TaskAssignmentService taskAssgnmentService;
+    private final ProjectWorkloadService projectWorkloadService;
+    private final TaskAssignmentService taskAssignmentService;
     private final TaskAssignmentMapper taskAssignmentMapper;
     private final ProjectMemberService projectMemberService;
     private final ProjectMemberMapper projectMemberMapper;
+    private final UserService userService;
+    private final UserMapper userMapper;
     private final ProjectService projectService;
     private final ProjectMapper projectMapper;
     private final TaskService taskService;
     private final TaskMapper taskMapper;
 
 
-    public ProjectTools(TaskAssignmentService taskAssgnmentService, TaskAssignmentMapper taskAssignmentMapper, ProjectMemberService projectMemberService, ProjectMemberMapper projectMemberMapper, ProjectService projectService, ProjectMapper projectMapper, TaskService taskService, TaskMapper taskMapper) {
-        this.taskAssgnmentService = taskAssgnmentService;
+    public ProjectTools(ProjectWorkloadService projectWorkloadService, TaskAssignmentService taskAssignmentService, TaskAssignmentMapper taskAssignmentMapper, ProjectMemberService projectMemberService, ProjectMemberMapper projectMemberMapper, UserService userService, UserMapper userMapper, ProjectService projectService, ProjectMapper projectMapper, TaskService taskService, TaskMapper taskMapper) {
+        this.projectWorkloadService = projectWorkloadService;
+        this.taskAssignmentService = taskAssignmentService;
         this.taskAssignmentMapper = taskAssignmentMapper;
         this.projectMemberService = projectMemberService;
         this.projectMemberMapper = projectMemberMapper;
+        this.userService = userService;
+        this.userMapper = userMapper;
         this.projectService = projectService;
         this.projectMapper = projectMapper;
         this.taskService = taskService;
@@ -103,7 +101,7 @@ public class ProjectTools {
     """)
     public List<TaskAssignmentResponse> getAssignedTasks()
     {
-        List<TaskAssignment> taskAssignments = taskAssgnmentService.getAssignedTasks();
+        List<TaskAssignment> taskAssignments = taskAssignmentService.getAssignedTasks();
         return taskAssignments.stream().map(taskAssignmentMapper::toTaskAssignmentResponse).toList();
     }
 
@@ -129,147 +127,40 @@ public class ProjectTools {
     public List<TaskAssignmentResponse> getTaskAssignees(@ToolParam(description = "ID of the task whose assignees should be retrieved.")
                                      Long taskId)
     {
-        List<TaskAssignment> taskAssignments = taskAssgnmentService.getTaskAssignees(taskId);
+        List<TaskAssignment> taskAssignments = taskAssignmentService.getTaskAssignees(taskId);
         return taskAssignments.stream().map(taskAssignmentMapper::toTaskAssignmentResponse).toList();
     }
 
     @Tool(description = """
-    Retrieves project-level workload and analytics.
-
+    Retrieves project-level workload statistics and analytics for a specified project.
+    
     Includes:
-    - Total, assigned and unassigned tasks.
+    - Total number of tasks.
+    - Assigned and unassigned task counts.
     - Completed tasks and completion percentage.
-    - Number of overdue tasks.
-    - Workload distribution across project members.
-    - Individual member status, priority and overdue counts.
-
-    MUST be used when the user asks about project workload,
-    task distribution, project progress, completion statistics,
-    or overdue tasks.
-
-    The requesting user must have permission to access the project.
+    - Number of overdue tasks and overdue task details.
+    - Overall task status distribution.
+    
+    Individual member workload information is subject to the authenticated user's permissions:
+    
+    - Project owners, company administrators belonging to the project's company, and global administrators receive detailed member workload statistics, including assigned task counts, status distribution, priority distribution, and overdue task counts.
+    - Ordinary project members receive aggregate project workload statistics only. Individual member workload details are not included.
+    
+    MUST be used when the user asks about project workload, task distribution, project progress, completion statistics, or overdue tasks.
+    
+    The backend validates project access and determines which workload information the authenticated user is authorized to receive. Never assume that an empty member workload collection means the project has no members.
     """)
     public ProjectWorkloadResponse getProjectWorkload(@ToolParam(description = "ID of the project to analyse.")
                                        Long projectId)
     {
-        //company owner or global admin or member
-        Project project = projectService.getProjectById(projectId);
-        List<TaskResponse> projectTasks = taskService.getTaskByProjectID(projectId);
-        ProjectWorkloadResponse response = new ProjectWorkloadResponse();
+        return projectWorkloadService.getProjectWorkload(projectId);
+    }
 
-        int totalTasks = projectTasks.size();
-        response.setTotalTasks(totalTasks);
-        response.setProjectId(project.getId());
-        response.setProjectName(project.getName());
-
-        List<TaskAssignmentResponse> taskAssignments = taskAssgnmentService.getTaskAssignments(projectId);
-
-        response.setTotalAssignments(taskAssignments.size());
-
-        //getting overall statistics of taskAssignments
-        Map<TaskStatus, Integer> overallStatusCounts = new EnumMap<>(TaskStatus.class);
-
-        for (TaskStatus status : TaskStatus.values()) {
-            overallStatusCounts.put(status, 0);
-        }
-
-        for(TaskResponse taskResponse : projectTasks)
-        {
-            overallStatusCounts.merge(taskResponse.getStatus(), 1, Integer::sum);
-            if(taskService.isTaskOverdue(taskResponse)) {
-                response.setOverdueTasks(response.getOverdueTasks() + 1);
-                response.getOverdueTaskDetails().add(taskResponse);
-            }
-        }
-        Set<Long> assignedTaskIds = new HashSet<>();
-        for(TaskAssignmentResponse taskAssignment : taskAssignments)
-        {
-            assignedTaskIds.add(taskAssignment.getTaskId());
-        }
-
-        response.setAssignedTasks(assignedTaskIds.size());
-        response.setUnassignedTasks(totalTasks - assignedTaskIds.size());
-        response.setOverallStatusCounts(overallStatusCounts);
-
-        int completedTasks = overallStatusCounts.get(TaskStatus.COMPLETED);
-        response.setCompletedTasks(completedTasks);
-        if(totalTasks == 0)
-            response.setCompletionPercentage(0);
-        else
-        {
-            double completionPercentage = (double) (completedTasks * 100) /totalTasks;
-            response.setCompletionPercentage(completionPercentage);
-        }
-
-        List<ProjectMember> projectMembers = projectMemberService.getProjectMembers(projectId);
-        Map<Long, MemberWorkloadResponse> membersById = new HashMap<>();
-        for (ProjectMember projectMember : projectMembers) {
-
-            Map<TaskStatus, Integer> statusCounts = new EnumMap<>(TaskStatus.class);
-
-            for (TaskStatus status : TaskStatus.values()) {
-                statusCounts.put(status, 0);
-            }
-
-            Map<TaskPriority, Integer> priorityCounts = new EnumMap<>(TaskPriority.class);
-
-            for (TaskPriority priority : TaskPriority.values()) {
-                priorityCounts.put(priority, 0);
-            }
-
-            MemberWorkloadResponse memberResponse = new MemberWorkloadResponse();
-
-            memberResponse.setProjectMemberId(projectMember.getId());
-            memberResponse.setUserId(projectMember.getUser().getId());
-            memberResponse.setUserName(projectMember.getUser().getName());
-
-            memberResponse.setAssignedTaskCount(0);
-            memberResponse.setStatusCounts(statusCounts);
-            memberResponse.setPriorityCounts(priorityCounts);
-
-            membersById.put(projectMember.getId(), memberResponse);
-        }
-
-        Map<Long, TaskResponse> tasksById = new HashMap<>();
-
-        for (TaskResponse task : projectTasks) {
-            tasksById.put(task.getId(), task);
-        }
-        for (TaskAssignmentResponse assignment : taskAssignments) {
-
-            // 1. Find the member
-            MemberWorkloadResponse member =
-                    membersById.get(assignment.getProjectMemberId());
-
-            // 2. Find the task
-            TaskResponse taskResponse =
-                    tasksById.get(assignment.getTaskId());
-
-            member.setAssignedTaskCount(
-                    member.getAssignedTaskCount() + 1
-            );
-
-            TaskStatus status = taskResponse.getStatus();
-
-            member.getStatusCounts().put(
-                    status,
-                    member.getStatusCounts().get(status) + 1
-            );
-
-            TaskPriority priority = taskResponse.getPriority();
-
-            member.getPriorityCounts().put(
-                    priority,
-                    member.getPriorityCounts().get(priority) + 1
-            );
-            if(taskService.isTaskOverdue(taskResponse))
-                member.setOverdueTaskCount(member.getOverdueTaskCount() + 1);
-
-        }
-
-        response.setMembers(new ArrayList<>(membersById.values()));
-
-        return response;
-
+    @Tool(name = "getLoggedInUser", description = """
+            Retrieves details about the currently authenticated user in ProjectHub, including their user ID, name, email address, company ID, company name, company role, account creation timestamp, and last update timestamp. Use this tool when the user asks about their profile, account information, company affiliation, or role within their company. Returns information only about the currently logged-in user.""")
+    public UserResponse getLoggedInUser()
+    {
+        User currentUser = userService.getLoggedInUser();
+        return userMapper.toUserResponse(currentUser);
     }
 }

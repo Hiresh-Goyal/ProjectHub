@@ -85,13 +85,11 @@ public class TaskAssignmentService {
 
     public List<TaskAssignmentResponse> getTaskAssignments(Long projectId)
     {
-        //owner or global admin
-        if(!projectService.isOwnerOrGlobalAdmin(projectId))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to get task assignments");
+        //owner or member or global admin
+        projectService.getProjectById(projectId);
 
         List<TaskAssignment> taskAssignments = taskAssignmentRepo.findAllByProjectMember_Project_Id(projectId);
 
         return taskAssignments.stream().map(taskAssignmentMapper::toTaskAssignmentResponse).toList();
-
     }
 }

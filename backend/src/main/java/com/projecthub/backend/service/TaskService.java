@@ -5,10 +5,7 @@ import com.projecthub.backend.dto.TaskResponse;
 import com.projecthub.backend.dto.TaskStatus;
 import com.projecthub.backend.exception.TaskNotFoundException;
 import com.projecthub.backend.mapper.TaskMapper;
-import com.projecthub.backend.model.Project;
-import com.projecthub.backend.model.ProjectMember;
-import com.projecthub.backend.model.Task;
-import com.projecthub.backend.model.User;
+import com.projecthub.backend.model.*;
 import com.projecthub.backend.repository.ProjectMemberRepo;
 import com.projecthub.backend.repository.TaskAssignmentRepo;
 import com.projecthub.backend.repository.TaskRepo;
@@ -154,5 +151,19 @@ public class TaskService
     public boolean isTaskOverdue(TaskResponse taskResponse)
     {
         return ((taskResponse.getDueDate() != null) && (taskResponse.getStatus() != (com.projecthub.backend.enums.TaskStatus.COMPLETED)) && (taskResponse.getDueDate().isBefore(LocalDate.now(ZoneId.of("Asia/Kolkata")))));
+    }
+
+    public List<TaskResponse> getMyAssignedTasksInProject(Long projectId)
+    {
+        User user = userService.getLoggedInUser();
+        ProjectMember member = projectMemberRepo.findByProjectIdAndUserId(projectId,user.getId()).orElseThrow( () ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "You are not a part of the project")
+        );
+        List<TaskAssignment> assignments = taskAssignmentRepo.findAllByProjectMemberId(member.getId());
+        return assignments
+                .stream()
+                .map(TaskAssignment::getTask)
+                .map(taskMapper::toTaskResponse)
+                .toList();
     }
 }
