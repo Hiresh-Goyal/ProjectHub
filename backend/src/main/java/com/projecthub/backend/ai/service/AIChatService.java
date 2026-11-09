@@ -1,9 +1,6 @@
 package com.projecthub.backend.ai.service;
 
-import com.projecthub.backend.ai.dto.AIResponseDraft;
-import com.projecthub.backend.ai.dto.ChatMessageResponse;
-import com.projecthub.backend.ai.dto.ChatResponse;
-import com.projecthub.backend.ai.dto.TaskRecommendationResponse;
+import com.projecthub.backend.ai.dto.*;
 import com.projecthub.backend.ai.enums.ChatMessageRole;
 import com.projecthub.backend.ai.tools.ProjectRecommendationTools;
 import com.projecthub.backend.ai.tools.ProjectTools;
@@ -34,14 +31,16 @@ public class AIChatService {
     private final ProjectRecommendationService projectRecommendationService;
     private final ChatHistoryService chatHistoryService;
     private final Validator validator;
+    private final TaskProposalService taskProposalService;
 
-    public AIChatService(ChatClient chatClient, ProjectTools projectTools, ProjectRecommendationTools projectRecommendationTools, ProjectRecommendationService projectRecommendationService, ChatHistoryService chatHistoryService, Validator validator) {
+    public AIChatService(ChatClient chatClient, ProjectTools projectTools, ProjectRecommendationTools projectRecommendationTools, ProjectRecommendationService projectRecommendationService, ChatHistoryService chatHistoryService, Validator validator, TaskProposalService taskProposalService) {
         this.chatClient = chatClient;
         this.projectTools = projectTools;
         this.projectRecommendationTools = projectRecommendationTools;
         this.projectRecommendationService = projectRecommendationService;
         this.chatHistoryService = chatHistoryService;
         this.validator = validator;
+        this.taskProposalService = taskProposalService;
     }
 
     public ResponseEntity<ChatResponse> generatedResponse(String message, Long conversationId)
@@ -108,12 +107,19 @@ public class AIChatService {
                         aiResponseDraft.getProjectId(),
                         aiResponseDraft.getRecommendations()
                 );
+
+        List<TaskProposalResponse> validatedTaskProposals = taskProposalService
+                .validateAndBuildProposals(
+                        aiResponseDraft.getProjectId(),
+                        aiResponseDraft.getTaskProposals()
+                );
         response.setRecommendations(validatedRecommendations);
+        response.setTaskProposals(validatedTaskProposals);
 
-
-        String assistantHistoryMessage = buildAssistantHistoryMessage(aiResponseDraft.getMessage(), validatedRecommendations);
+        String assistantHistoryMessage = buildAssistantHistoryMessage(aiResponseDraft.getMessage(), validatedRecommendations, validatedTaskProposals);
         conversationId = chatHistoryService.saveExchange(conversationId, message, assistantHistoryMessage);
 
+        response.setProjectId(aiResponseDraft.getProjectId());
         response.setConversationId(conversationId);
         response.setResponse(aiResponseDraft.getMessage());
         return ResponseEntity.ok(response);
@@ -121,44 +127,84 @@ public class AIChatService {
 
     private String buildAssistantHistoryMessage(
             String message,
-            List<TaskRecommendationResponse> recommendations
+            List<TaskRecommendationResponse> recommendations,
+            List<TaskProposalResponse> taskProposals
     ) {
         StringBuilder historyMessage = new StringBuilder(message);
 
-        if (recommendations == null || recommendations.isEmpty()) {
-            return historyMessage.toString();
+        // Append recommended tasks
+        if (recommendations != null && !recommendations.isEmpty()) {
+
+            historyMessage.append("\n\nRecommended Tasks:\n");
+
+            for (int i = 0; i < recommendations.size(); i++) {
+
+                TaskRecommendationResponse recommendation = recommendations.get(i);
+                TaskResponse task = recommendation.getTask();
+
+                historyMessage.append("\n")
+                        .append(i + 1)
+                        .append(". ")
+                        .append(task.getTitle())
+                        .append(" (Task ID: ")
+                        .append(task.getId())
+                        .append(")\n");
+
+                historyMessage.append("   Priority: ")
+                        .append(task.getPriority() != null
+                                ? task.getPriority() : "Not specified")
+                        .append("\n");
+
+                historyMessage.append("   Status: ")
+                        .append(task.getStatus() != null
+                                ? task.getStatus() : "Not specified")
+                        .append("\n");
+
+                historyMessage.append("   Due Date: ")
+                        .append(task.getDueDate() != null
+                                ? task.getDueDate() : "No due date")
+                        .append("\n");
+
+                historyMessage.append("   Reason: ")
+                        .append(recommendation.getReason())
+                        .append("\n");
+            }
         }
 
-        historyMessage.append("\n\nRecommended Tasks:\n");
+        // Append generated task proposals
+        if (taskProposals != null && !taskProposals.isEmpty()) {
 
-        for (int i = 0; i < recommendations.size(); i++) {
+            historyMessage.append("\n\nGenerated Task Proposals (Not Yet Created in ProjectHub):\n");
 
-            TaskRecommendationResponse recommendation = recommendations.get(i);
-            TaskResponse task = recommendation.getTask();
+            for (int i = 0; i < taskProposals.size(); i++) {
 
-            historyMessage.append("\n")
-                    .append(i + 1)
-                    .append(". ")
-                    .append(task.getTitle())
-                    .append(" (Task ID: ")
-                    .append(task.getId())
-                    .append(")\n");
+                TaskProposalResponse proposal = taskProposals.get(i);
 
-            historyMessage.append("   Priority: ")
-                    .append(task.getPriority() != null ? task.getPriority() : "Not specified")
-                    .append("\n");
+                historyMessage.append("\n")
+                        .append(i + 1)
+                        .append(". ")
+                        .append(proposal.getTitle())
+                        .append("\n");
 
-            historyMessage.append("   Status: ")
-                    .append(task.getStatus() != null ? task.getStatus() : "Not specified")
-                    .append("\n");
+                historyMessage.append("   Description: ")
+                        .append(proposal.getDescription() != null
+                                ? proposal.getDescription() : "Not provided")
+                        .append("\n");
 
-            historyMessage.append("   Due Date: ")
-                    .append(task.getDueDate() != null ? task.getDueDate() : "No due date")
-                    .append("\n");
+                historyMessage.append("   Priority: ")
+                        .append(proposal.getPriority() != null
+                                ? proposal.getPriority() : "Not specified")
+                        .append("\n");
 
-            historyMessage.append("   Reason: ")
-                    .append(recommendation.getReason())
-                    .append("\n");
+                historyMessage.append("   Due Date: ")
+                        .append(proposal.getDueDate() != null
+                                ? proposal.getDueDate() : "Not specified")
+                        .append("\n");
+
+                historyMessage.append("   Rationale: ")
+                        .append(proposal.getRationale())
+                        .append("\n");
+            }
         }
 
         return historyMessage.toString().stripTrailing();

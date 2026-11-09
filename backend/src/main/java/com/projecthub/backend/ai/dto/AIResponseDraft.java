@@ -22,8 +22,15 @@ public class AIResponseDraft {
     @Positive
     @Nullable
     private Long projectId;
+
     @NotNull
     @Valid
     @Size(max = 5, message = "No of recommendations cannot exceed 5")
     private List<TaskRecommendationDraft> recommendations = new ArrayList<>();
+
+    @NotNull
+    @Valid
+    @Size(max = 10, message = "No of task proposals cannot exceed 10")
+    private List<TaskProposalDraft> taskProposals = new ArrayList<>();
+
 }

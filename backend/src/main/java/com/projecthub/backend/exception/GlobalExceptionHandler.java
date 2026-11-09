@@ -150,7 +150,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public GlobalErrorResponse handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException ex)
+    public ResponseEntity<GlobalErrorResponse> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException ex)
     {
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
                 HttpStatus.METHOD_NOT_ALLOWED.value(),
@@ -159,7 +159,7 @@ public class GlobalExceptionHandler {
                 new java.util.Date()
         );
         log.info("Method Not Allowed Exception {}", ex.getMessage());
-        return errorResponse;
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
