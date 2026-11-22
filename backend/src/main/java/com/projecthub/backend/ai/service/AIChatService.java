@@ -1,10 +1,10 @@
 package com.projecthub.backend.ai.service;
 
 import com.projecthub.backend.ai.dto.*;
+import com.projecthub.backend.ai.enums.AIResponseType;
 import com.projecthub.backend.ai.enums.ChatMessageRole;
 import com.projecthub.backend.ai.tools.ProjectRecommendationTools;
 import com.projecthub.backend.ai.tools.ProjectTools;
-import com.projecthub.backend.dto.TaskResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +33,9 @@ public class AIChatService {
     private final ChatHistoryService chatHistoryService;
     private final Validator validator;
     private final TaskProposalService taskProposalService;
+    private final ObjectMapper objectMapper;
 
-    public AIChatService(ChatClient chatClient, ProjectTools projectTools, ProjectRecommendationTools projectRecommendationTools, ProjectRecommendationService projectRecommendationService, ChatHistoryService chatHistoryService, Validator validator, TaskProposalService taskProposalService) {
+    public AIChatService(ChatClient chatClient, ProjectTools projectTools, ProjectRecommendationTools projectRecommendationTools, ProjectRecommendationService projectRecommendationService, ChatHistoryService chatHistoryService, Validator validator, TaskProposalService taskProposalService, ObjectMapper objectMapper) {
         this.chatClient = chatClient;
         this.projectTools = projectTools;
         this.projectRecommendationTools = projectRecommendationTools;
@@ -41,6 +43,7 @@ public class AIChatService {
         this.chatHistoryService = chatHistoryService;
         this.validator = validator;
         this.taskProposalService = taskProposalService;
+        this.objectMapper = objectMapper;
     }
 
     public ResponseEntity<ChatResponse> generatedResponse(String message, Long conversationId)
@@ -69,7 +72,21 @@ public class AIChatService {
             }
             else if (messageResponse.getRole() == ChatMessageRole.ASSISTANT)
             {
-                AssistantMessage assistantMessage = new AssistantMessage(messageResponse.getContent());
+                String content = messageResponse.getContent();
+
+                if (messageResponse.getStructuredData() != null)
+                {
+                    String structuredJson = objectMapper.writeValueAsString(
+                            messageResponse.getStructuredData()
+                    );
+
+                    content += "\n\nHistorical structured result "
+                            + "(for context only; may not reflect current project state). "
+                            + "Use ProjectHub tools to verify current information:\n"
+                            + structuredJson;
+                }
+
+                AssistantMessage assistantMessage = new AssistantMessage(content);
                 springAiMessages.add(assistantMessage);
             }
         }
@@ -116,8 +133,24 @@ public class AIChatService {
         response.setRecommendations(validatedRecommendations);
         response.setTaskProposals(validatedTaskProposals);
 
-        String assistantHistoryMessage = buildAssistantHistoryMessage(aiResponseDraft.getMessage(), validatedRecommendations, validatedTaskProposals);
-        conversationId = chatHistoryService.saveExchange(conversationId, message, assistantHistoryMessage);
+        ChatMessageStructuredData structuredData = new ChatMessageStructuredData();
+
+        structuredData.setSchemaVersion(1);
+
+        structuredData.setResponseType(
+                determineResponseType(validatedRecommendations, validatedTaskProposals)
+        );
+
+        structuredData.setProjectId(
+                (validatedRecommendations.isEmpty() && validatedTaskProposals.isEmpty())
+                        ? null
+                        : aiResponseDraft.getProjectId()
+        );
+
+        structuredData.setRecommendations(validatedRecommendations);
+        structuredData.setTaskProposals(validatedTaskProposals);
+
+        conversationId = chatHistoryService.saveExchange(conversationId, message, aiResponseDraft.getMessage(), structuredData);
 
         response.setProjectId(aiResponseDraft.getProjectId());
         response.setConversationId(conversationId);
@@ -125,88 +158,22 @@ public class AIChatService {
         return ResponseEntity.ok(response);
     }
 
-    private String buildAssistantHistoryMessage(
-            String message,
+    private AIResponseType determineResponseType(
             List<TaskRecommendationResponse> recommendations,
             List<TaskProposalResponse> taskProposals
     ) {
-        StringBuilder historyMessage = new StringBuilder(message);
-
-        // Append recommended tasks
-        if (recommendations != null && !recommendations.isEmpty()) {
-
-            historyMessage.append("\n\nRecommended Tasks:\n");
-
-            for (int i = 0; i < recommendations.size(); i++) {
-
-                TaskRecommendationResponse recommendation = recommendations.get(i);
-                TaskResponse task = recommendation.getTask();
-
-                historyMessage.append("\n")
-                        .append(i + 1)
-                        .append(". ")
-                        .append(task.getTitle())
-                        .append(" (Task ID: ")
-                        .append(task.getId())
-                        .append(")\n");
-
-                historyMessage.append("   Priority: ")
-                        .append(task.getPriority() != null
-                                ? task.getPriority() : "Not specified")
-                        .append("\n");
-
-                historyMessage.append("   Status: ")
-                        .append(task.getStatus() != null
-                                ? task.getStatus() : "Not specified")
-                        .append("\n");
-
-                historyMessage.append("   Due Date: ")
-                        .append(task.getDueDate() != null
-                                ? task.getDueDate() : "No due date")
-                        .append("\n");
-
-                historyMessage.append("   Reason: ")
-                        .append(recommendation.getReason())
-                        .append("\n");
-            }
+        if (!recommendations.isEmpty() && !taskProposals.isEmpty()) {
+            return AIResponseType.MIXED;
         }
 
-        // Append generated task proposals
-        if (taskProposals != null && !taskProposals.isEmpty()) {
-
-            historyMessage.append("\n\nGenerated Task Proposals (Not Yet Created in ProjectHub):\n");
-
-            for (int i = 0; i < taskProposals.size(); i++) {
-
-                TaskProposalResponse proposal = taskProposals.get(i);
-
-                historyMessage.append("\n")
-                        .append(i + 1)
-                        .append(". ")
-                        .append(proposal.getTitle())
-                        .append("\n");
-
-                historyMessage.append("   Description: ")
-                        .append(proposal.getDescription() != null
-                                ? proposal.getDescription() : "Not provided")
-                        .append("\n");
-
-                historyMessage.append("   Priority: ")
-                        .append(proposal.getPriority() != null
-                                ? proposal.getPriority() : "Not specified")
-                        .append("\n");
-
-                historyMessage.append("   Due Date: ")
-                        .append(proposal.getDueDate() != null
-                                ? proposal.getDueDate() : "Not specified")
-                        .append("\n");
-
-                historyMessage.append("   Rationale: ")
-                        .append(proposal.getRationale())
-                        .append("\n");
-            }
+        if (!recommendations.isEmpty()) {
+            return AIResponseType.RECOMMENDATION;
         }
 
-        return historyMessage.toString().stripTrailing();
+        if (!taskProposals.isEmpty()) {
+            return AIResponseType.TASK_PLANNING;
+        }
+
+        return AIResponseType.GENERAL;
     }
 }

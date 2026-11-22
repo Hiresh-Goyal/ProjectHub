@@ -13,7 +13,8 @@ public class MessageMapper {
                 message.getId(),
                 message.getRole(),
                 message.getContent(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                message.getStructuredData()
         );
     }
 

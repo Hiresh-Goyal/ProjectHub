@@ -15,4 +15,5 @@ public class ChatMessageResponse {
     private ChatMessageRole role;
     private String content;
     private LocalDateTime createdAt;
+    private ChatMessageStructuredData structuredData;
 }

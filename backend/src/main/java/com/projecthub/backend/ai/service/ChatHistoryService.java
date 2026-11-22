@@ -1,6 +1,7 @@
 package com.projecthub.backend.ai.service;
 
 import com.projecthub.backend.ai.dto.ChatMessageResponse;
+import com.projecthub.backend.ai.dto.ChatMessageStructuredData;
 import com.projecthub.backend.ai.dto.ConversationResponse;
 import com.projecthub.backend.ai.enums.ChatMessageRole;
 import com.projecthub.backend.ai.mapper.ConversationMapper;
@@ -90,20 +91,27 @@ public class ChatHistoryService {
     }
 
     @Transactional
-    public ChatMessageResponse saveMessage(Long conversationId, ChatMessageRole role, String content)
+    public ChatMessageResponse saveMessage(Long conversationId,
+                                           ChatMessageRole role,
+                                           String content,
+                                           ChatMessageStructuredData structuredData)
     {
         ChatMessage chatMessage = new ChatMessage();
         ChatConversation conversation = getConversationForCurrentUser(conversationId);
         chatMessage.setConversation(conversation);
         chatMessage.setRole(role);
         chatMessage.setContent(content);
+        chatMessage.setStructuredData(structuredData);
         ChatMessage savedMessage = chatMessageRepo.save(chatMessage);
         conversation.setUpdatedAt(LocalDateTime.now());
         return messageMapper.toMessageResponse(savedMessage);
     }
 
     @Transactional
-    public Long saveExchange(Long conversationId, String message, String aiResponse)
+    public Long saveExchange(Long conversationId,
+                             String message,
+                             String aiResponse,
+                             ChatMessageStructuredData structuredData)
     {
         //creating convo if no exist
         if(conversationId == null)
@@ -113,10 +121,10 @@ public class ChatHistoryService {
         }
 
         //saving user message
-        saveMessage(conversationId, ChatMessageRole.USER,message);
+        saveMessage(conversationId, ChatMessageRole.USER, message, null);
 
         //saving AI response
-        saveMessage(conversationId, ChatMessageRole.ASSISTANT, aiResponse);
+        saveMessage(conversationId, ChatMessageRole.ASSISTANT, aiResponse, structuredData);
 
         return conversationId;
     }
