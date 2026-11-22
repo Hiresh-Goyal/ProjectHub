@@ -3,6 +3,7 @@ package com.projecthub.backend.ai.controller;
 import com.projecthub.backend.ai.dto.ChatMessageResponse;
 import com.projecthub.backend.ai.dto.ConversationResponse;
 import com.projecthub.backend.ai.dto.RenameConversationRequest;
+import com.projecthub.backend.ai.dto.TaskProposalAcceptanceResponse;
 import com.projecthub.backend.ai.service.ChatHistoryService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/ai/conversations")
@@ -53,5 +55,12 @@ public class ChatHistoryController {
     {
         chatHistoryService.deleteConversation(conversationId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/{conversationId}/messages/{messageId}/proposals/{proposalId}/accept")
+    public ResponseEntity<TaskProposalAcceptanceResponse> createAcceptedTask(@PathVariable Long conversationId, @PathVariable Long messageId, @PathVariable UUID proposalId)
+    {
+        return ResponseEntity.status(HttpStatus.CREATED).body(chatHistoryService.createAcceptedTask(conversationId,
+                messageId, proposalId));
     }
 }

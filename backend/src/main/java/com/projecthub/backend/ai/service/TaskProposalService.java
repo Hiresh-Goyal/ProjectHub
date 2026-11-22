@@ -2,6 +2,7 @@ package com.projecthub.backend.ai.service;
 
 import com.projecthub.backend.ai.dto.TaskProposalDraft;
 import com.projecthub.backend.ai.dto.TaskProposalResponse;
+import com.projecthub.backend.ai.enums.TaskProposalStatus;
 import com.projecthub.backend.service.ProjectService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class TaskProposalService {
@@ -39,11 +41,14 @@ public class TaskProposalService {
         for(TaskProposalDraft taskProposal : taskProposals)
         {
             TaskProposalResponse taskProposalResponse = new TaskProposalResponse(
+                    UUID.randomUUID(),
                     taskProposal.getTitle(),
                     taskProposal.getDescription(),
                     taskProposal.getPriority(),
                     taskProposal.getDueDate(),
-                    taskProposal.getRationale()
+                    taskProposal.getRationale(),
+                    TaskProposalStatus.PENDING,
+                    null
             );
             taskProposalResponses.add(taskProposalResponse);
         }

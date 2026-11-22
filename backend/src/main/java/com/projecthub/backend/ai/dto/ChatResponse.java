@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ChatResponse {
     private Long projectId;
+    private Long assistantMessageId;
     private String response;
     private Long conversationId;
     private List<TaskRecommendationResponse> recommendations = new ArrayList<>();

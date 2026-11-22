@@ -135,7 +135,7 @@ public class AIChatService {
 
         ChatMessageStructuredData structuredData = new ChatMessageStructuredData();
 
-        structuredData.setSchemaVersion(1);
+        structuredData.setSchemaVersion(Integer.parseInt(System.getenv("CURRENT_SCHEMA_VERSION")));
 
         structuredData.setResponseType(
                 determineResponseType(validatedRecommendations, validatedTaskProposals)
@@ -150,10 +150,11 @@ public class AIChatService {
         structuredData.setRecommendations(validatedRecommendations);
         structuredData.setTaskProposals(validatedTaskProposals);
 
-        conversationId = chatHistoryService.saveExchange(conversationId, message, aiResponseDraft.getMessage(), structuredData);
+        ChatExchangeSaveResult saveResult = chatHistoryService.saveExchange(conversationId, message, aiResponseDraft.getMessage(), structuredData);
 
+        response.setAssistantMessageId(saveResult.getAssistantMessageId());
         response.setProjectId(aiResponseDraft.getProjectId());
-        response.setConversationId(conversationId);
+        response.setConversationId(saveResult.getConversationId());
         response.setResponse(aiResponseDraft.getMessage());
         return ResponseEntity.ok(response);
     }
