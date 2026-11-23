@@ -172,7 +172,7 @@ public class ChatHistoryService {
     @Transactional
     public TaskProposalAcceptanceResponse createAcceptedTask(Long conversationId, Long messageId, UUID proposalId) {
         getConversationForCurrentUser(conversationId);
-        ChatMessage message = chatMessageRepo.findById(messageId).orElseThrow(() ->
+        ChatMessage message = chatMessageRepo.findByIdForUpdate(messageId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "No message with the provided id was found"));
 
         if(!Objects.equals(message.getConversation().getId(), conversationId))
