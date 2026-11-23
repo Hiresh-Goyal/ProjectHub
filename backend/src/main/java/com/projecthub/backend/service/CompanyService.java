@@ -3,6 +3,7 @@ package com.projecthub.backend.service;
 import com.projecthub.backend.dto.CreateCompanyRequest;
 import com.projecthub.backend.dto.CreateCompanyResponse;
 import com.projecthub.backend.enums.CompanyRole;
+import com.projecthub.backend.exception.UserNotFoundException;
 import com.projecthub.backend.mapper.CompanyMapper;
 import com.projecthub.backend.model.Company;
 import com.projecthub.backend.model.ProjectMember;
@@ -10,6 +11,7 @@ import com.projecthub.backend.model.User;
 import com.projecthub.backend.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -17,10 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 public class CompanyService {
@@ -153,20 +152,23 @@ public class CompanyService {
     @Transactional
     public void moveOwnership(Long userId)
     {
-        User user = userService.getLoggedInUser();
+        String email = SecurityContextHolder.getContext().getAuthentication().getName().trim().toLowerCase(Locale.ROOT);
+        User currentUser = userRepo.findByEmailForOwnerTransfer(email).orElseThrow(() ->
+                new UserNotFoundException("User not found with email : " + email)
+        );
 
-        if (!(userService.isCompanyOwner())) {
+        if (!(currentUser.getCompanyRole() == CompanyRole.COMPANY_ADMIN)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not owner of the company.");
         }
 
-        Company company = user.getCompany();
+        Company company = currentUser.getCompany();
         if(company == null)
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not part of a company.");
 
-        if(Objects.equals(user.getId(), userId))
+        if(Objects.equals(currentUser.getId(), userId))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Entered Id matches your Id");
 
-        User user2 = userRepo.findById(userId).orElseThrow(() ->
+        User user2 = userRepo.findByIdForOwnerTransfer(userId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
         );
         Company company2 = user2.getCompany();
@@ -175,10 +177,10 @@ public class CompanyService {
         if(company2 == null || Objects.equals(company2.getId(), company.getId()))
         {
             user2.setCompany(company);
-            user.setCompanyRole(CompanyRole.COMPANY_MEMBER);
+            currentUser.setCompanyRole(CompanyRole.COMPANY_MEMBER);
             user2.setCompanyRole(CompanyRole.COMPANY_ADMIN);
             userRepo.save(user2);
-            userRepo.save(user);
+            userRepo.save(currentUser);
         }
         else
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You belong to different companies.");
