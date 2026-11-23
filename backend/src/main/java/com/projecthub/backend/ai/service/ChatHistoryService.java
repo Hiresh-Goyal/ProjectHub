@@ -140,12 +140,10 @@ public class ChatHistoryService {
         //saving AI response
         ChatMessageResponse messageResponse = saveMessage(conversationId, ChatMessageRole.ASSISTANT, aiResponse, structuredData);
 
-        ChatExchangeSaveResult saveResult = new ChatExchangeSaveResult(
+        return new ChatExchangeSaveResult(
                 conversationId,
                 messageResponse.getMessageId()
         );
-
-        return saveResult;
     }
 
     @Transactional
@@ -189,7 +187,7 @@ public class ChatHistoryService {
                 List<TaskProposalResponse> proposals = structuredData.getTaskProposals();
                 if (proposals != null) {
                     for (TaskProposalResponse proposal : proposals) {
-                        if (proposal.getProposalId().equals(proposalId)) {
+                        if (Objects.equals(proposal.getProposalId(),proposalId)) {
                             if(!(proposal.getStatus() == TaskProposalStatus.PENDING))
                                 return taskProposalAcceptanceMapper.toTaskProposalAcceptanceResponse(proposal, taskMapper.toTaskResponse(taskService.getTaskById(proposal.getCreatedTaskId())));
 

@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/companies")
 public class CompanyController {
     private final CompanyService companyService;
     private final CompanyMapper companyMapper;
@@ -20,7 +20,7 @@ public class CompanyController {
         this.companyMapper = companyMapper;
     }
 
-    @GetMapping("companies/me")
+    @GetMapping("/me")
     public ResponseEntity<CompanyResponse> getMyCompany()
     {
         Company company = companyService.getMyCompany();
@@ -29,30 +29,44 @@ public class CompanyController {
         return ResponseEntity.ok(companyResponse);
     }
 
-    @PostMapping("/companies")
+    @PostMapping("/add")
     public ResponseEntity<CreateCompanyResponse> addCompany(@Valid @RequestBody CreateCompanyRequest createCompanyRequest)
     {
         return ResponseEntity.status(HttpStatus.CREATED).body(companyService.createCompany(createCompanyRequest));
     }
 
-    @PostMapping("/companies/join")
+    @PostMapping("/join")
     public ResponseEntity<String> joinCompany(@Valid @RequestBody JoinCompanyRequest joinCompanyRequest)
     {
         companyService.joinCompany(joinCompanyRequest.getInvitationCode());
         return ResponseEntity.ok("You have joined the company");
     }
 
-    @PatchMapping("/companies/me/invitation-code")
+    @PatchMapping("/me/invitation-code")
     public ResponseEntity<String> rotateCode()
     {
         return ResponseEntity.ok(companyService.updateInviteCode());
     }
 
-    @PutMapping("/companies/me/owner")
+    @PutMapping("/me/owner")
     public ResponseEntity<String> moveOwner(@Valid @RequestBody MoveOwnershipRequest moveOwnershipRequest)
     {
         companyService.moveOwnership(moveOwnershipRequest.getId());
         return ResponseEntity.ok("Company ownership has been successfully changed");
+    }
+
+    @DeleteMapping("/me/members/{memberId}")
+    public ResponseEntity<Void> removeMember(@PathVariable Long memberId)
+    {
+        companyService.removeMember(memberId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @DeleteMapping("/me/membership")
+    public ResponseEntity<Void> leaveCompany()
+    {
+        companyService.leaveCompany();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
 }
