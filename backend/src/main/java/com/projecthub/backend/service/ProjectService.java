@@ -2,6 +2,7 @@ package com.projecthub.backend.service;
 
 import com.projecthub.backend.dto.ProjectRequest;
 import com.projecthub.backend.dto.ProjectResponse;
+import com.projecthub.backend.dto.TransferProjectOwnershipRequest;
 import com.projecthub.backend.exception.ProjectNotFoundException;
 import com.projecthub.backend.mapper.ProjectMapper;
 import com.projecthub.backend.model.*;
@@ -156,5 +157,49 @@ public class ProjectService
         return ((((isProjectOwner(project.getId())) || (userService.isCompanyOwner()))
                 && sameCompany(project, currentUser)) ||
                 (userService.isGlobalAdmin()));
+    }
+
+    @Transactional
+    public void moveProjectOwnership(TransferProjectOwnershipRequest transferProjectOwnershipRequest, Long projectId) {
+        Long userId = transferProjectOwnershipRequest.getUserId();
+        User newOwner = userService.getUserById(userId);
+        User currentUser = userService.getLoggedInUser();
+        Project project = getProjectById(projectId);
+
+        //if user is owner of company or is global admin skip the ownership check
+        if(!(userService.isGlobalAdmin())) {
+
+            if(currentUser.getCompany() == null)
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Current user does not belong to a company");
+
+            boolean sameCompany = Objects.equals(currentUser.getCompany().getId(), project.getCompany().getId());
+            if(!(userService.isCompanyOwner() && sameCompany)) {
+                if (!isProjectOwner(projectId))
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this project");
+            }
+        }
+
+        //does the new owner belong to a company
+        if(newOwner.getCompany() == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "New owner does not belong to a company");
+
+        //if transferring to current owner
+        if(Objects.equals(project.getOwner().getId(), userId))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New owner id same as current owner id");
+
+        //if user belongs to same company or not
+        if(!Objects.equals(newOwner.getCompany().getId(), project.getCompany().getId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "New owner does not belong to same company");
+
+        //Fetch the project membership
+        ProjectMember member = projectMemberRepo.findByProjectIdAndUserId(projectId, userId).orElse(null);
+
+        //delete the task assignments and membership
+        if(member != null) {
+            taskAssignmentRepo.deleteByProjectMemberId(member.getId());
+            projectMemberRepo.deleteById(member.getId());
+        }
+
+        project.setOwner(newOwner);
     }
 }
